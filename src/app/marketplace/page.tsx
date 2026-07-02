@@ -1,27 +1,49 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Heart, PlusCircle } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Button } from "@/components/ui/button";
+import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
 import { ListingGrid } from "@/components/marketplace/listing-grid";
 import {
   MarketplaceSearchControls,
   DEFAULT_MARKETPLACE_SEARCH,
 } from "@/components/marketplace/marketplace-search-state";
 import { useUserListings } from "@/components/providers/user-listings-provider";
-import { listings as mockListings } from "@/lib/mock-data";
-import { filterAndSortListings, mergeListings } from "@/lib/marketplace-utils";
+import {
+  filterAndSortListings,
+  getBrowseListings,
+  getMarketplaceBrowseLayout,
+} from "@/lib/marketplace-utils";
+import { isDemoDataEnabledWithOverride } from "@/lib/product-mode";
 
 export default function MarketplacePage() {
+  return (
+    <Suspense
+      fallback={
+        <AppShell>
+          <SectionHeading title="Marketplace" subtitle="Loading..." />
+        </AppShell>
+      }
+    >
+      <MarketplacePageContent />
+    </Suspense>
+  );
+}
+
+function MarketplacePageContent() {
+  const searchParams = useSearchParams();
   const { userListings } = useUserListings();
   const [searchState, setSearchState] = useState(DEFAULT_MARKETPLACE_SEARCH);
+  const demoEnabled = isDemoDataEnabledWithOverride(searchParams);
 
   const allListings = useMemo(
-    () => mergeListings(mockListings, userListings),
-    [userListings]
+    () => getBrowseListings(userListings, { includeDemo: demoEnabled }),
+    [userListings, demoEnabled]
   );
 
   const filtered = useMemo(
@@ -29,26 +51,33 @@ export default function MarketplacePage() {
     [allListings, searchState]
   );
 
-  const featured = useMemo(
-    () =>
-      filtered.filter((l) => l.isFeatured).slice(0, 4),
-    [filtered]
+  const { showFeaturedSection, featured, browseListings, resultCount } = useMemo(
+    () => getMarketplaceBrowseLayout(filtered, searchState),
+    [filtered, searchState]
   );
 
-  const showFeatured =
-    searchState.category === "all" &&
-    !searchState.search &&
-    searchState.condition === "all" &&
-    searchState.campusArea === "all" &&
-    featured.length > 0;
+  const isRealEmpty = !demoEnabled && allListings.length === 0;
+  const listingDeleted = searchParams.get("listingDeleted") === "1";
 
   return (
     <AppShell>
+      {listingDeleted && (
+        <div
+          role="status"
+          data-testid="listing-deleted-message"
+          className="mb-6 rounded-2xl border border-gold/30 bg-gold/10 px-4 py-3 text-sm"
+        >
+          Listing deleted.
+        </div>
+      )}
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <SectionHeading
-          title="Marketplace"
-          subtitle="Buy and sell with verified UCF students"
-        />
+        <div className="space-y-2">
+          <SectionHeading
+            title="Marketplace"
+            subtitle="Buy and sell with verified UCF students"
+          />
+          <DemoModeBadge />
+        </div>
         <div className="flex gap-2">
           <Link href="/saved">
             <Button variant="secondary" size="sm">
@@ -65,6 +94,12 @@ export default function MarketplacePage() {
         </div>
       </div>
 
+      {!demoEnabled && userListings.length > 0 && (
+        <p className="mb-6 text-xs text-muted">
+          Real image uploads are coming next. Listings may show placeholder previews for now.
+        </p>
+      )}
+
       <div className="mb-8">
         <MarketplaceSearchControls
           state={searchState}
@@ -72,22 +107,31 @@ export default function MarketplacePage() {
         />
       </div>
 
-      {showFeatured && (
-        <section className="mb-10">
+      {showFeaturedSection && (
+        <section className="mb-10" data-testid="featured-listings-section">
           <h3 className="mb-4 text-lg font-semibold text-gold">Featured Listings</h3>
           <ListingGrid listings={featured} />
         </section>
       )}
 
-      <section>
+      <section data-testid="browse-listings-section">
         <h3 className="mb-4 text-lg font-semibold">
-          {filtered.length} Listing{filtered.length !== 1 ? "s" : ""}
+          {resultCount} Listing{resultCount !== 1 ? "s" : ""}
         </h3>
         <ListingGrid
-          listings={filtered}
+          listings={browseListings}
           showSellCta
-          emptyTitle="No listings match your search"
-          emptyDescription="Try different filters or post something new."
+          emptyTitle={
+            isRealEmpty
+              ? "No student listings yet"
+              : "No listings match your search"
+          }
+          emptyDescription={
+            isRealEmpty
+              ? "Be the first verified student to post something on Knight Market."
+              : "Try different filters or post something new."
+          }
+          emptyPrimaryLabel={isRealEmpty ? "Post the first listing" : undefined}
         />
       </section>
     </AppShell>

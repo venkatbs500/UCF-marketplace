@@ -4,7 +4,8 @@ import type { CampusJob } from "@/lib/types";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
-import { ProtectedActionButton } from "@/components/auth/protected-action-button";
+import { ComingSoonAction } from "@/components/ui/coming-soon-action";
+import { COMING_SOON_MESSAGES } from "@/lib/coming-soon-messages";
 import { MapPin, Clock, DollarSign } from "lucide-react";
 
 const typeLabels: Record<string, string> = {
@@ -52,9 +53,13 @@ export function JobCard({ job }: JobCardProps) {
           <Avatar initials={job.postedBy.avatar} size="sm" />
           <span className="text-xs">{job.postedBy.name}</span>
         </div>
-        <ProtectedActionButton size="sm" variant="outline" unlockedLabel="Ready">
+        <ComingSoonAction
+          size="sm"
+          variant="outline"
+          comingSoonMessage={COMING_SOON_MESSAGES.apply}
+        >
           Apply
-        </ProtectedActionButton>
+        </ComingSoonAction>
       </CardFooter>
     </Card>
   );

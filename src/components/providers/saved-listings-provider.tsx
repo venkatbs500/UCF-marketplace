@@ -7,13 +7,7 @@ import {
   useMemo,
   useSyncExternalStore,
 } from "react";
-import {
-  getEmptySavedSnapshot,
-  getSavedListingsSnapshot,
-  loadSavedListingIds,
-  saveSavedListingIds,
-  subscribeStorage,
-} from "@/lib/marketplace-storage";
+import { localMarketplaceService } from "@/lib/services/local-marketplace-service";
 
 type SavedListingsContextValue = {
   isLoading: boolean;
@@ -45,9 +39,9 @@ export function SavedListingsProvider({
   children: React.ReactNode;
 }) {
   const savedListingIds = useSyncExternalStore(
-    subscribeStorage,
-    getSavedListingsSnapshot,
-    getEmptySavedSnapshot
+    localMarketplaceService.subscribe,
+    localMarketplaceService.getSavedListingIdsSnapshot,
+    localMarketplaceService.getEmptySavedSnapshot
   );
   const isMounted = useSyncExternalStore(
     subscribeNoop,
@@ -62,15 +56,11 @@ export function SavedListingsProvider({
   );
 
   const toggleSaved = useCallback((id: string) => {
-    const current = loadSavedListingIds();
-    const next = current.includes(id)
-      ? current.filter((savedId) => savedId !== id)
-      : [...current, id];
-    saveSavedListingIds(next);
+    localMarketplaceService.toggleSavedListing(id);
   }, []);
 
   const clearSaved = useCallback(() => {
-    saveSavedListingIds([]);
+    localMarketplaceService.clearSavedListings();
   }, []);
 
   const value = useMemo(

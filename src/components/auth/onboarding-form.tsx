@@ -134,11 +134,12 @@ export function OnboardingForm() {
             </div>
 
             <div>
-              <label className="mb-2 flex items-center gap-2 text-sm font-medium">
+              <label htmlFor="campusArea" className="mb-2 flex items-center gap-2 text-sm font-medium">
                 <MapPin className="h-4 w-4 text-gold" />
                 Campus Area
               </label>
               <select
+                id="campusArea"
                 value={campusArea}
                 onChange={(e) => setCampusArea(e.target.value as CampusAreaOption)}
                 className="flex h-11 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-gold"
@@ -177,7 +178,10 @@ export function OnboardingForm() {
             </div>
 
             {error && (
-              <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              <p
+                role="alert"
+                className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+              >
                 {error}
               </p>
             )}

@@ -5,7 +5,8 @@ import { formatPrice } from "@/lib/utils";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
-import { ProtectedActionButton } from "@/components/auth/protected-action-button";
+import { ComingSoonAction } from "@/components/ui/coming-soon-action";
+import { COMING_SOON_MESSAGES } from "@/lib/coming-soon-messages";
 import { Star, Clock, BookOpen } from "lucide-react";
 
 interface TutorCardProps {
@@ -53,10 +54,14 @@ export function TutorCard({ tutor }: TutorCardProps) {
         </p>
       </CardContent>
       <CardFooter className="border-t border-white/5 pt-3">
-        <ProtectedActionButton size="sm" className="w-full" unlockedLabel="Ready">
+        <ComingSoonAction
+          size="sm"
+          className="w-full"
+          comingSoonMessage={COMING_SOON_MESSAGES.bookSession}
+        >
           <BookOpen className="h-3.5 w-3.5" />
           Book Session
-        </ProtectedActionButton>
+        </ComingSoonAction>
       </CardFooter>
     </Card>
   );

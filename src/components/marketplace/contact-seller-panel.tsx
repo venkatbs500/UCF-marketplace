@@ -2,7 +2,8 @@
 
 import { MessageCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { ProtectedActionButton } from "@/components/auth/protected-action-button";
+import { ComingSoonAction } from "@/components/ui/coming-soon-action";
+import { COMING_SOON_MESSAGES } from "@/lib/coming-soon-messages";
 
 export function ContactSellerPanel() {
   return (
@@ -12,10 +13,13 @@ export function ContactSellerPanel() {
         <p className="mb-4 text-sm text-muted">
           Message the seller to ask questions or arrange pickup. Verified students only.
         </p>
-        <ProtectedActionButton className="w-full">
+        <ComingSoonAction
+          className="w-full"
+          comingSoonMessage={COMING_SOON_MESSAGES.messageSeller}
+        >
           <MessageCircle className="h-4 w-4" />
           Message Seller
-        </ProtectedActionButton>
+        </ComingSoonAction>
       </CardContent>
     </Card>
   );

@@ -5,23 +5,13 @@ import {
   useCallback,
   useContext,
   useMemo,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 import type { AuthUser, Listing, ListingDraft } from "@/lib/types";
-import { EMPTY_LISTING_DRAFT } from "@/lib/types";
-import {
-  clearListingDraft,
-  getEmptyDraftSnapshot,
-  getEmptyUserListingsSnapshot,
-  getListingDraftSnapshot,
-  getUserListingsSnapshot,
-  loadListingDraft,
-  loadUserListings,
-  saveListingDraft,
-  saveUserListings,
-  subscribeStorage,
-} from "@/lib/marketplace-storage";
+import { localMarketplaceService } from "@/lib/services/local-marketplace-service";
+import type { DeleteListingResult } from "@/lib/services/marketplace-service";
 
 type UserListingsContextValue = {
   isLoading: boolean;
@@ -30,6 +20,7 @@ type UserListingsContextValue = {
   updateDraft: (patch: Partial<ListingDraft>) => void;
   clearDraft: () => void;
   createListing: (user: AuthUser) => Listing | null;
+  deleteListing: (listingId: string, user: AuthUser) => DeleteListingResult;
   publishSuccess: boolean;
   clearPublishSuccess: () => void;
 };
@@ -48,65 +39,20 @@ function getServerMounted() {
   return false;
 }
 
-function draftToListing(draft: ListingDraft, user: AuthUser): Listing | null {
-  if (
-    !draft.title.trim() ||
-    !draft.category ||
-    !draft.condition ||
-    draft.price === "" ||
-    !draft.campusArea ||
-    !draft.location.trim() ||
-    !draft.description.trim()
-  ) {
-    return null;
-  }
-
-  const now = new Date().toISOString().split("T")[0];
-  const price = Number(draft.price);
-
-  return {
-    id: `user-listing-${Date.now()}`,
-    title: draft.title.trim(),
-    description: draft.description.trim(),
-    price: Number.isNaN(price) ? 0 : price,
-    category: draft.category,
-    condition: draft.condition,
-    location: draft.location.trim(),
-    campusArea: draft.campusArea,
-    sellerId: user.id,
-    sellerName: user.name,
-    sellerAvatarInitials: user.avatarInitials,
-    sellerRating: 5,
-    sellerJoinedAt: user.joinedAt,
-    sellerMajor: user.major,
-    sellerYear: user.year,
-    images: draft.images.length > 0 ? draft.images : ["📦"],
-    tags: draft.tags,
-    postedAt: now,
-    updatedAt: now,
-    isFeatured: false,
-    isNegotiable: draft.isNegotiable,
-    pickupOptions: draft.pickupOptions,
-    status: "active",
-    views: 0,
-    savedCount: 0,
-  };
-}
-
 export function UserListingsProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const userListings = useSyncExternalStore(
-    subscribeStorage,
-    getUserListingsSnapshot,
-    getEmptyUserListingsSnapshot
+    localMarketplaceService.subscribe,
+    localMarketplaceService.getUserListingsSnapshot,
+    localMarketplaceService.getEmptyUserListingsSnapshot
   );
   const currentDraft = useSyncExternalStore(
-    subscribeStorage,
-    getListingDraftSnapshot,
-    getEmptyDraftSnapshot
+    localMarketplaceService.subscribe,
+    localMarketplaceService.getDraftSnapshot,
+    localMarketplaceService.getEmptyDraftSnapshot
   );
   const isMounted = useSyncExternalStore(
     subscribeNoop,
@@ -115,32 +61,42 @@ export function UserListingsProvider({
   );
   const isLoading = !isMounted;
   const [publishSuccess, setPublishSuccess] = useState(false);
+  const isPublishingRef = useRef(false);
 
   const updateDraft = useCallback((patch: Partial<ListingDraft>) => {
-    const current = loadListingDraft();
-    saveListingDraft({ ...current, ...patch });
+    localMarketplaceService.updateDraft(patch);
   }, []);
 
   const clearDraft = useCallback(() => {
-    clearListingDraft();
-    saveListingDraft({ ...EMPTY_LISTING_DRAFT });
+    localMarketplaceService.clearDraft();
   }, []);
 
   const createListing = useCallback((user: AuthUser): Listing | null => {
-    const draft = loadListingDraft();
-    const listing = draftToListing(draft, user);
-    if (!listing) return null;
+    if (isPublishingRef.current || publishSuccess) return null;
+    const draft = localMarketplaceService.getCurrentDraft();
+    const existing = localMarketplaceService.getUserListings();
 
-    const existing = loadUserListings();
-    saveUserListings([listing, ...existing]);
-    clearListingDraft();
-    saveListingDraft({ ...EMPTY_LISTING_DRAFT });
-    setPublishSuccess(true);
-    return listing;
-  }, []);
+    isPublishingRef.current = true;
+    try {
+      const result = localMarketplaceService.publishListing(user, draft, existing);
+      if (!result.listing) return null;
+      setPublishSuccess(true);
+      return result.listing;
+    } finally {
+      isPublishingRef.current = false;
+    }
+  }, [publishSuccess]);
+
+  const deleteListing = useCallback(
+    (listingId: string, user: AuthUser): DeleteListingResult => {
+      return localMarketplaceService.deleteListing(listingId, user.id);
+    },
+    []
+  );
 
   const clearPublishSuccess = useCallback(() => {
     setPublishSuccess(false);
+    localMarketplaceService.clearDraft();
   }, []);
 
   const value = useMemo(
@@ -151,6 +107,7 @@ export function UserListingsProvider({
       updateDraft,
       clearDraft,
       createListing,
+      deleteListing,
       publishSuccess,
       clearPublishSuccess,
     }),
@@ -161,6 +118,7 @@ export function UserListingsProvider({
       updateDraft,
       clearDraft,
       createListing,
+      deleteListing,
       publishSuccess,
       clearPublishSuccess,
     ]

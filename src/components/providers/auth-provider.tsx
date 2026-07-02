@@ -8,27 +8,15 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useRouter } from "next/navigation";
-import type { AuthUser } from "@/lib/types";
 import type { OnboardingData } from "@/lib/onboarding-options";
-import {
-  applyOnboardingToUser,
-  clearSession,
-  createUserFromEmail,
-  getServerSessionSnapshot,
-  getSessionSnapshot,
-  INVALID_CODE_ERROR,
-  loadSession,
-  MOCK_VERIFICATION_CODE,
-  saveSession,
-  subscribeSession,
-  UCF_EMAIL_ERROR,
-  isUcfEmail,
-} from "@/lib/auth";
+import { activeAuthService } from "@/lib/services/active-auth-service";
+import { AUTH_MODE } from "@/lib/supabase/config";
 
 type AuthContextValue = {
-  user: AuthUser | null;
+  user: ReturnType<typeof activeAuthService.getSession>["user"];
   pendingEmail: string | null;
   isLoading: boolean;
+  authMode: "local" | "supabase";
   isAuthenticated: boolean;
   isVerifiedStudent: boolean;
   hasCompletedOnboarding: boolean;
@@ -37,6 +25,7 @@ type AuthContextValue = {
   completeOnboarding: (
     data: OnboardingData
   ) => Promise<{ success: boolean; error?: string }>;
+  refreshSession: () => Promise<void>;
   signOut: () => void;
 };
 
@@ -57,9 +46,9 @@ function getServerMounted() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const session = useSyncExternalStore(
-    subscribeSession,
-    getSessionSnapshot,
-    getServerSessionSnapshot
+    activeAuthService.subscribe,
+    activeAuthService.getSessionSnapshot,
+    activeAuthService.getServerSessionSnapshot
   );
   const isMounted = useSyncExternalStore(
     subscribeNoop,
@@ -71,64 +60,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pendingEmail = session.pendingEmail;
   const isLoading = !isMounted;
 
-  const persist = useCallback((nextUser: AuthUser | null, nextPending: string | null) => {
-    saveSession({ user: nextUser, pendingEmail: nextPending });
-  }, []);
-
   const signInWithEmail = useCallback(
-    async (email: string) => {
-      const trimmed = email.trim().toLowerCase();
-      if (!trimmed) {
-        return { success: false, error: "Please enter your UCF email." };
-      }
-      if (!isUcfEmail(trimmed)) {
-        return { success: false, error: UCF_EMAIL_ERROR };
-      }
-      persist(null, trimmed);
-      return { success: true };
-    },
-    [persist]
+    (email: string) => activeAuthService.signInWithEmail(email),
+    []
   );
 
   const verifyCode = useCallback(
-    async (code: string) => {
-      const currentSession = loadSession();
-      const email = currentSession.pendingEmail ?? pendingEmail;
-      if (!email) {
-        return { success: false, error: "No pending verification. Please sign in again." };
-      }
-      if (code.trim() !== MOCK_VERIFICATION_CODE) {
-        return { success: false, error: INVALID_CODE_ERROR };
-      }
-      const newUser = createUserFromEmail(email);
-      persist(newUser, null);
-      return { success: true };
-    },
-    [pendingEmail, persist]
+    (code: string) => activeAuthService.verifyCode(code, pendingEmail),
+    [pendingEmail]
   );
 
   const completeOnboarding = useCallback(
-    async (data: OnboardingData) => {
-      const currentSession = loadSession();
-      const currentUser = currentSession.user ?? user;
+    (data: OnboardingData) => {
+      const currentUser = activeAuthService.getSession().user ?? user;
       if (!currentUser) {
-        return { success: false, error: "No active session. Please sign in again." };
+        return Promise.resolve({
+          success: false,
+          error: "No active session. Please sign in again.",
+        });
       }
-      if (!data.name.trim() || !data.major.trim()) {
-        return { success: false, error: "Please fill in your name and major." };
-      }
-      if (data.interests.length === 0) {
-        return { success: false, error: "Select at least one interest." };
-      }
-      const updated = applyOnboardingToUser(currentUser, data);
-      persist(updated, null);
-      return { success: true };
+      return activeAuthService.completeOnboarding(currentUser, data);
     },
-    [user, persist]
+    [user]
+  );
+
+  const refreshSession = useCallback(
+    () => activeAuthService.refreshSession(),
+    []
   );
 
   const signOut = useCallback(() => {
-    clearSession();
+    activeAuthService.signOut();
     router.push("/");
   }, [router]);
 
@@ -137,12 +99,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       pendingEmail,
       isLoading,
+      authMode: AUTH_MODE,
       isAuthenticated: Boolean(user?.isVerifiedStudent),
       isVerifiedStudent: Boolean(user?.isVerifiedStudent),
       hasCompletedOnboarding: Boolean(user?.hasCompletedOnboarding),
       signInWithEmail,
       verifyCode,
       completeOnboarding,
+      refreshSession,
       signOut,
     }),
     [
@@ -152,6 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInWithEmail,
       verifyCode,
       completeOnboarding,
+      refreshSession,
       signOut,
     ]
   );

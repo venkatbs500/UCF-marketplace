@@ -5,7 +5,8 @@ import { formatPrice } from "@/lib/utils";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
-import { ProtectedActionButton } from "@/components/auth/protected-action-button";
+import { ComingSoonAction } from "@/components/ui/coming-soon-action";
+import { COMING_SOON_MESSAGES } from "@/lib/coming-soon-messages";
 import { Bed, Bath, MapPin, Calendar } from "lucide-react";
 
 interface HousingCardProps {
@@ -50,9 +51,13 @@ export function HousingCard({ post }: HousingCardProps) {
           <Avatar initials={post.poster.avatar} size="sm" verified={post.poster.verified} />
           <span className="text-xs">{post.poster.name}</span>
         </div>
-        <ProtectedActionButton size="sm" variant="outline" unlockedLabel="Ready">
+        <ComingSoonAction
+          size="sm"
+          variant="outline"
+          comingSoonMessage={COMING_SOON_MESSAGES.contactHousing}
+        >
           Contact
-        </ProtectedActionButton>
+        </ComingSoonAction>
       </CardFooter>
     </Card>
   );

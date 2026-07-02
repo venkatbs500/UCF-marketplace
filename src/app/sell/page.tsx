@@ -14,10 +14,18 @@ function SellContent() {
   const { user } = useAuth();
   const { publishSuccess, clearPublishSuccess } = useUserListings();
 
+  const handleCreateAnother = () => {
+    clearPublishSuccess();
+  };
+
   if (publishSuccess) {
     return (
       <AppShell>
-        <PublishSuccessCard sellerId={user?.id} />
+        <PublishSuccessCard
+          sellerId={user?.id}
+          onCreateAnother={handleCreateAnother}
+          onDismiss={clearPublishSuccess}
+        />
         <button
           type="button"
           onClick={clearPublishSuccess}

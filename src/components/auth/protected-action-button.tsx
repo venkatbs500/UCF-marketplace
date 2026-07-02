@@ -32,6 +32,8 @@ export function ProtectedActionButton({
   const [unlocked, setUnlocked] = useState(false);
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
     if (isLoading || disabled) return;
 
     if (!isAuthenticated) {

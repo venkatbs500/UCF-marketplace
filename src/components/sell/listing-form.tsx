@@ -76,8 +76,9 @@ export function ListingForm() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-medium">Category</label>
+                <label htmlFor="sell-category" className="mb-2 block text-sm font-medium">Category</label>
                 <select
+                  id="sell-category"
                   value={currentDraft.category}
                   onChange={(e) =>
                     updateDraft({ category: e.target.value as MarketplaceCategory })
@@ -93,8 +94,9 @@ export function ListingForm() {
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-medium">Condition</label>
+                <label htmlFor="sell-condition" className="mb-2 block text-sm font-medium">Condition</label>
                 <select
+                  id="sell-condition"
                   value={currentDraft.condition}
                   onChange={(e) =>
                     updateDraft({ condition: e.target.value as ListingCondition })
@@ -134,8 +136,9 @@ export function ListingForm() {
               </div>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium">Campus Area</label>
+              <label htmlFor="sell-campus-area" className="mb-2 block text-sm font-medium">Campus Area</label>
               <select
+                id="sell-campus-area"
                 value={currentDraft.campusArea}
                 onChange={(e) => updateDraft({ campusArea: e.target.value })}
                 className="flex h-11 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm"

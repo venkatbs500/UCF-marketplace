@@ -1,26 +1,34 @@
 "use client";
 
+import Link from "next/link";
 import { MessageCircle, Shield } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
 import { messagePreviews } from "@/lib/mock-data";
 import { formatRelativeTime, cn } from "@/lib/utils";
+import { isDemoDataEnabled } from "@/lib/product-mode";
 import { useState } from "react";
 
-function MessagesContent() {
+function DemoMessagesContent() {
   const [activeId, setActiveId] = useState(messagePreviews[0]?.id);
   const active = messagePreviews.find((m) => m.id === activeId);
 
   return (
     <AppShell>
-      <SectionHeading
-        title="Messages"
-        subtitle="Chat with sellers, tutors, and roommates"
-      />
+      <div className="mb-6 space-y-2">
+        <SectionHeading
+          title="Messages"
+          subtitle="Chat with sellers, tutors, and roommates"
+        />
+        <DemoModeBadge />
+      </div>
 
       <div className="mb-6 flex items-center gap-3 rounded-2xl border border-gold/20 bg-gold/5 p-4">
         <Shield className="h-5 w-5 shrink-0 text-gold" />
@@ -126,6 +134,40 @@ function MessagesContent() {
       </div>
     </AppShell>
   );
+}
+
+function RealMessagesContent() {
+  return (
+    <AppShell>
+      <SectionHeading
+        title="Messages"
+        subtitle="Chat with sellers, tutors, and roommates"
+      />
+
+      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-gold/20 bg-gold/5 p-4">
+        <Shield className="h-5 w-5 shrink-0 text-gold" />
+        <p className="text-sm text-muted">
+          Messages are limited to verified students to reduce spam.
+        </p>
+      </div>
+
+      <EmptyState
+        icon={MessageCircle}
+        title="No messages yet"
+        description="When you contact a seller, roommate, or tutor, your conversations will appear here."
+        action={
+          <Link href="/marketplace">
+            <Button>Browse marketplace</Button>
+          </Link>
+        }
+      />
+    </AppShell>
+  );
+}
+
+function MessagesContent() {
+  const demoEnabled = isDemoDataEnabled();
+  return demoEnabled ? <DemoMessagesContent /> : <RealMessagesContent />;
 }
 
 export default function MessagesPage() {

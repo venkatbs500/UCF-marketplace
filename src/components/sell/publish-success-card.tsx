@@ -5,9 +5,15 @@ import { Button } from "@/components/ui/button";
 
 interface PublishSuccessCardProps {
   sellerId?: string;
+  onCreateAnother?: () => void;
+  onDismiss?: () => void;
 }
 
-export function PublishSuccessCard({ sellerId }: PublishSuccessCardProps) {
+export function PublishSuccessCard({
+  sellerId,
+  onCreateAnother,
+  onDismiss,
+}: PublishSuccessCardProps) {
   return (
     <Card className="max-w-lg border-gold/30 bg-gradient-to-br from-gold/10 to-transparent">
       <CardContent className="py-10 text-center">
@@ -17,22 +23,24 @@ export function PublishSuccessCard({ sellerId }: PublishSuccessCardProps) {
           Your listing is now live on Knight Market. Verified students can browse and message you.
         </p>
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Link href="/marketplace">
+          <Link href="/marketplace" onClick={onDismiss}>
             <Button className="w-full sm:w-auto">View Marketplace</Button>
           </Link>
-          <Link href="/sell">
-            <Button variant="secondary" className="w-full sm:w-auto">
-              Create Another Listing
-            </Button>
-          </Link>
+          <Button
+            variant="secondary"
+            className="w-full sm:w-auto"
+            onClick={onCreateAnother}
+          >
+            Create Another Listing
+          </Button>
           {sellerId ? (
-            <Link href={`/sellers/${sellerId}`}>
+            <Link href={`/sellers/${sellerId}`} onClick={onDismiss}>
               <Button variant="outline" className="w-full sm:w-auto">
                 View Seller Profile
               </Button>
             </Link>
           ) : (
-            <Link href="/profile">
+            <Link href="/profile" onClick={onDismiss}>
               <Button variant="outline" className="w-full sm:w-auto">
                 View Profile
               </Button>

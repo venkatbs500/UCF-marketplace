@@ -51,6 +51,7 @@ export function MarketplaceSearchControls({
         placeholder="Search title, description, location, tags..."
         value={state.search}
         onChange={(search) => onChange({ search })}
+        ariaLabel="Search marketplace"
       />
 
       <MarketplaceFilters

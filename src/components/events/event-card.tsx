@@ -4,7 +4,8 @@ import type { CampusEvent } from "@/lib/types";
 import { formatDate } from "@/lib/utils";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ProtectedActionButton } from "@/components/auth/protected-action-button";
+import { ComingSoonAction } from "@/components/ui/coming-soon-action";
+import { COMING_SOON_MESSAGES } from "@/lib/coming-soon-messages";
 import { Calendar, MapPin, Users, Clock } from "lucide-react";
 
 const typeLabels: Record<string, string> = {
@@ -53,9 +54,13 @@ export function EventCard({ event }: EventCardProps) {
         <p className="mt-2 text-xs text-muted">Hosted by {event.host}</p>
       </CardContent>
       <CardFooter className="border-t border-white/5 pt-3">
-        <ProtectedActionButton size="sm" className="w-full" unlockedLabel="Ready">
+        <ComingSoonAction
+          size="sm"
+          className="w-full"
+          comingSoonMessage={COMING_SOON_MESSAGES.rsvp}
+        >
           RSVP
-        </ProtectedActionButton>
+        </ComingSoonAction>
       </CardFooter>
     </Card>
   );

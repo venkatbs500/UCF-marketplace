@@ -18,7 +18,7 @@ interface ListingInfoPanelProps {
 
 export function ListingInfoPanel({ listing }: ListingInfoPanelProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="listing-detail">
       <div className="flex items-start justify-between gap-4">
         <div>
           {listing.isFeatured && (

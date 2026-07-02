@@ -1,5 +1,6 @@
 import type { AuthUser, Listing, ListingSortOption, SellerProfile } from "./types";
 import { listings as mockListings, sellerProfiles } from "./mock-data";
+import { isDemoDataEnabled } from "./product-mode";
 
 export function buildSellerProfileFromAuthUser(user: AuthUser): SellerProfile {
   return {
@@ -48,10 +49,15 @@ export function resolveSellerProfile(
   options: {
     authUser?: AuthUser | null;
     userListings?: Listing[];
+    includeDemo?: boolean;
   } = {}
 ): SellerProfile | undefined {
-  const mock = sellerProfiles.find((s) => s.id === sellerId);
-  if (mock) return mock;
+  const includeDemo = options.includeDemo ?? isDemoDataEnabled();
+
+  if (includeDemo) {
+    const mock = sellerProfiles.find((s) => s.id === sellerId);
+    if (mock) return mock;
+  }
 
   if (options.authUser?.id === sellerId) {
     const sales = (options.userListings ?? []).filter(
@@ -63,7 +69,7 @@ export function resolveSellerProfile(
     };
   }
 
-  const listing = mergeListings(mockListings, options.userListings ?? []).find(
+  const listing = getBrowseListings(options.userListings ?? [], { includeDemo }).find(
     (l) => l.sellerId === sellerId
   );
   if (listing) {
@@ -83,6 +89,16 @@ export function getAllMockListings(): Listing[] {
   return mockListings;
 }
 
+export function getBrowseListings(
+  userListings: Listing[] = [],
+  options?: { includeDemo?: boolean }
+): Listing[] {
+  const includeDemo = options?.includeDemo ?? isDemoDataEnabled();
+  const activeUser = userListings.filter((listing) => listing.status === "active");
+  if (!includeDemo) return activeUser;
+  return mergeListings(mockListings, userListings);
+}
+
 export function mergeListings(
   mock: Listing[],
   userListings: Listing[]
@@ -91,11 +107,26 @@ export function mergeListings(
   return [...activeUser, ...mock.filter((l) => l.status === "active")];
 }
 
+const USER_LISTING_ID_PREFIX = "user-listing-";
+
+export function isUserCreatedListing(listing: Listing): boolean {
+  return listing.id.startsWith(USER_LISTING_ID_PREFIX);
+}
+
+export function canUserDeleteListing(
+  listing: Listing,
+  userId: string | null | undefined
+): boolean {
+  if (!userId) return false;
+  return listing.sellerId === userId && isUserCreatedListing(listing);
+}
+
 export function getListingById(
   id: string,
-  userListings: Listing[] = []
+  userListings: Listing[] = [],
+  options?: { includeDemo?: boolean }
 ): Listing | undefined {
-  return mergeListings(mockListings, userListings).find((l) => l.id === id);
+  return getBrowseListings(userListings, options).find((listing) => listing.id === id);
 }
 
 export function getSellerById(
@@ -110,24 +141,26 @@ export function getSellerById(
 
 export function getListingsBySeller(
   sellerId: string,
-  userListings: Listing[] = []
+  userListings: Listing[] = [],
+  options?: { includeDemo?: boolean }
 ): Listing[] {
-  return mergeListings(mockListings, userListings).filter(
-    (l) => l.sellerId === sellerId && l.status === "active"
+  return getBrowseListings(userListings, options).filter(
+    (listing) => listing.sellerId === sellerId && listing.status === "active"
   );
 }
 
 export function getRelatedListings(
   listing: Listing,
   userListings: Listing[] = [],
-  limit = 4
+  limit = 4,
+  options?: { includeDemo?: boolean }
 ): Listing[] {
-  return mergeListings(mockListings, userListings)
+  return getBrowseListings(userListings, options)
     .filter(
-      (l) =>
-        l.id !== listing.id &&
-        l.category === listing.category &&
-        l.status === "active"
+      (item) =>
+        item.id !== listing.id &&
+        item.category === listing.category &&
+        item.status === "active"
     )
     .slice(0, limit);
 }
@@ -139,6 +172,56 @@ export type MarketplaceFilters = {
   campusArea: string;
   sort: ListingSortOption;
 };
+
+export function isMarketplaceFilterActive(filters: MarketplaceFilters): boolean {
+  return (
+    Boolean(filters.search.trim()) ||
+    filters.category !== "all" ||
+    filters.condition !== "all" ||
+    filters.campusArea !== "all"
+  );
+}
+
+export function getFeaturedListings(listings: Listing[], limit = 4): Listing[] {
+  return listings.filter((l) => l.isFeatured).slice(0, limit);
+}
+
+export function excludeListingsById(
+  listings: Listing[],
+  excludeIds: Set<string>
+): Listing[] {
+  return listings.filter((l) => !excludeIds.has(l.id));
+}
+
+export type MarketplaceBrowseLayout = {
+  showFeaturedSection: boolean;
+  featured: Listing[];
+  browseListings: Listing[];
+  resultCount: number;
+};
+
+/** Splits default browse view into featured row + non-featured grid without duplicates. */
+export function getMarketplaceBrowseLayout(
+  filtered: Listing[],
+  filters: MarketplaceFilters
+): MarketplaceBrowseLayout {
+  const filterActive = isMarketplaceFilterActive(filters);
+  const featured = getFeaturedListings(filtered);
+  const showFeaturedSection = !filterActive && featured.length > 0;
+  const featuredIds = new Set(featured.map((l) => l.id));
+  const browseListings = showFeaturedSection
+    ? excludeListingsById(filtered, featuredIds)
+    : filtered;
+
+  return {
+    showFeaturedSection,
+    featured,
+    browseListings,
+    resultCount: showFeaturedSection
+      ? featured.length + browseListings.length
+      : filtered.length,
+  };
+}
 
 export function filterAndSortListings(
   listings: Listing[],

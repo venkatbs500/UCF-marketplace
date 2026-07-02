@@ -23,6 +23,7 @@ export default function ListingDetailPage() {
           icon={Package}
           title="Listing not found"
           description="This listing may have been removed or the link is incorrect."
+          testId="listing-not-found"
           action={
             <Link href="/marketplace">
               <Button>Back to Marketplace</Button>

@@ -7,6 +7,7 @@ interface SearchBarProps {
   className?: string;
   value?: string;
   onChange?: (value: string) => void;
+  ariaLabel?: string;
 }
 
 export function SearchBar({
@@ -14,6 +15,7 @@ export function SearchBar({
   className,
   value,
   onChange,
+  ariaLabel = "Search",
 }: SearchBarProps) {
   return (
     <div className={cn("relative", className)}>
@@ -23,6 +25,7 @@ export function SearchBar({
         className="pl-11"
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
+        aria-label={ariaLabel}
       />
     </div>
   );

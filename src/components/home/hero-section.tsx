@@ -10,11 +10,15 @@ import {
   Tag,
   Sparkles,
   ArrowRight,
+  Briefcase,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
+import { isDemoDataEnabled } from "@/lib/product-mode";
 
-const previewCards = [
+const demoPreviewCards = [
   {
     icon: ShoppingBag,
     title: "Used Desk — $45",
@@ -53,11 +57,57 @@ const previewCards = [
   },
 ];
 
+const realPreviewCards = [
+  {
+    icon: ShoppingBag,
+    title: "Student Marketplace",
+    subtitle: "Ready for real student posts",
+    color: "from-blue-500/20 to-blue-600/10",
+  },
+  {
+    icon: Users,
+    title: "Housing",
+    subtitle: "Coming soon",
+    color: "from-purple-500/20 to-purple-600/10",
+  },
+  {
+    icon: GraduationCap,
+    title: "Tutoring",
+    subtitle: "Coming soon",
+    color: "from-green-500/20 to-green-600/10",
+  },
+  {
+    icon: Briefcase,
+    title: "Campus Jobs",
+    subtitle: "Coming soon",
+    color: "from-orange-500/20 to-orange-600/10",
+  },
+  {
+    icon: Calendar,
+    title: "Events",
+    subtitle: "Coming soon",
+    color: "from-pink-500/20 to-pink-600/10",
+  },
+  {
+    icon: Sparkles,
+    title: "AI Study Tools",
+    subtitle: "Planned — not connected yet",
+    color: "from-gold/20 to-gold/10",
+  },
+];
+
 export function HeroSection() {
+  const demoEnabled = isDemoDataEnabled();
+  const previewCards = demoEnabled ? demoPreviewCards : realPreviewCards;
+
   return (
     <section className="relative overflow-hidden rounded-3xl glass-card p-8 md:p-12 lg:p-16">
       <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gold/10 blur-3xl" />
       <div className="absolute -bottom-10 -left-10 h-48 w-48 rounded-full bg-gold/5 blur-3xl" />
+
+      <div className="relative mb-4">
+        <DemoModeBadge />
+      </div>
 
       <div className="relative grid gap-10 lg:grid-cols-2 lg:gap-16">
         <motion.div
@@ -92,7 +142,7 @@ export function HeroSection() {
             </Link>
           </div>
           <p className="mt-6 text-xs text-muted">
-            Future sign-up will require UCF email verification (.edu)
+            Sign in with your verified UCF student email to post and save listings.
           </p>
         </motion.div>
 

@@ -8,18 +8,19 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { ListingGrid } from "@/components/marketplace/listing-grid";
 import { useSavedListings } from "@/components/providers/saved-listings-provider";
 import { useUserListings } from "@/components/providers/user-listings-provider";
-import { listings as mockListings } from "@/lib/mock-data";
-import { mergeListings } from "@/lib/marketplace-utils";
+import { getBrowseListings } from "@/lib/marketplace-utils";
+import { isDemoDataEnabled } from "@/lib/product-mode";
 import { Button } from "@/components/ui/button";
 
 function SavedContent() {
   const { savedListingIds } = useSavedListings();
   const { userListings } = useUserListings();
+  const demoEnabled = isDemoDataEnabled();
 
   const savedListings = useMemo(() => {
-    const all = mergeListings(mockListings, userListings);
+    const all = getBrowseListings(userListings, { includeDemo: demoEnabled });
     return all.filter((l) => savedListingIds.includes(l.id));
-  }, [savedListingIds, userListings]);
+  }, [savedListingIds, userListings, demoEnabled]);
 
   return (
     <AppShell>

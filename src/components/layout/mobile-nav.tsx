@@ -25,7 +25,7 @@ import { AUTH_ROUTES } from "@/lib/auth";
 const mobileNavItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/marketplace", label: "Shop", icon: Store },
-  { href: "/sell", label: "Sell", icon: PlusCircle },
+  { href: "/sell", label: "Sell", icon: PlusCircle, authRequired: true },
   { href: "/messages", label: "Chat", icon: MessageCircle },
   { href: "/profile", label: "Profile", icon: User, authRequired: true },
 ];
@@ -45,7 +45,10 @@ export function MobileNav() {
   const { isLoading, isAuthenticated } = useAuth();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-background/90 backdrop-blur-xl md:hidden">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-background/90 backdrop-blur-xl md:hidden"
+      aria-label="Mobile navigation"
+    >
       <div className="flex items-center justify-around px-2 py-2">
         {mobileNavItems.map((item) => {
           const active = pathname === item.href;
@@ -66,6 +69,7 @@ export function MobileNav() {
             <Link
               key={item.href}
               href={href}
+              aria-label={`${item.label} tab`}
               className={cn(
                 "flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-medium transition-colors",
                 active ? "text-gold" : "text-muted"

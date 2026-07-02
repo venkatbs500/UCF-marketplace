@@ -6,10 +6,12 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ListingGrid } from "@/components/marketplace/listing-grid";
+import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useSavedListings } from "@/components/providers/saved-listings-provider";
 import { useUserListings } from "@/components/providers/user-listings-provider";
 import { reviews } from "@/lib/mock-data";
+import { isDemoDataEnabled } from "@/lib/product-mode";
 import { formatDate } from "@/lib/utils";
 import { Shield, Star, Package, Heart, Activity, MapPin, Calendar } from "lucide-react";
 import { ProfileTabs } from "./profile-tabs";
@@ -20,13 +22,30 @@ function ProfileContent() {
   const { user } = useAuth();
   const { savedListingIds } = useSavedListings();
   const { userListings } = useUserListings();
+  const demoEnabled = isDemoDataEnabled();
 
   if (!user) return null;
 
   const myPosted = userListings.filter((l) => l.sellerId === user.id);
 
+  const stats = demoEnabled
+    ? [
+        { icon: Package, label: "Posted", value: myPosted.length },
+        { icon: Heart, label: "Saved", value: savedListingIds.length },
+        { icon: Star, label: "Reviews", value: reviews.length },
+        { icon: Activity, label: "Active", value: 12 },
+      ]
+    : [
+        { icon: Package, label: "Posted", value: myPosted.length },
+        { icon: Heart, label: "Saved", value: savedListingIds.length },
+      ];
+
   return (
     <AppShell>
+      <div className="mb-4">
+        <DemoModeBadge />
+      </div>
+
       <div className="mb-8 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
         <Avatar
           initials={user.avatarInitials}
@@ -82,13 +101,12 @@ function ProfileContent() {
         </Card>
       </div>
 
-      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          { icon: Package, label: "Posted", value: myPosted.length },
-          { icon: Heart, label: "Saved", value: savedListingIds.length },
-          { icon: Star, label: "Reviews", value: reviews.length },
-          { icon: Activity, label: "Active", value: 12 },
-        ].map((stat) => (
+      <div
+        className={`mb-8 grid gap-4 ${
+          demoEnabled ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"
+        }`}
+      >
+        {stats.map((stat) => (
           <Card key={stat.label} className="text-center">
             <CardContent className="py-4">
               <stat.icon className="mx-auto mb-2 h-5 w-5 text-gold" />
@@ -109,22 +127,20 @@ function ProfileContent() {
           </Link>
         </div>
         {myPosted.length > 0 ? (
-          <ListingGrid listings={myPosted} />
+          <ListingGrid listings={myPosted} ownerActionVariant="profile" />
         ) : (
           <Card>
             <CardContent className="py-8 text-center">
-              <p className="mb-4 text-sm text-muted">
-                You haven&apos;t posted any listings yet.
-              </p>
+              <p className="mb-4 text-sm text-muted">No posted listings yet</p>
               <Link href="/sell">
-                <Button>Start Selling</Button>
+                <Button>Post a listing</Button>
               </Link>
             </CardContent>
           </Card>
         )}
       </section>
 
-      <ProfileTabs reviews={reviews} />
+      <ProfileTabs reviews={reviews} demoEnabled={demoEnabled} />
     </AppShell>
   );
 }

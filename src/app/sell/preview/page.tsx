@@ -14,7 +14,8 @@ import { FileText } from "lucide-react";
 
 function PreviewContent() {
   const { user } = useAuth();
-  const { currentDraft, createListing, publishSuccess } = useUserListings();
+  const { currentDraft, createListing, publishSuccess, clearPublishSuccess } =
+    useUserListings();
 
   const hasDraft =
     currentDraft.title.trim() &&
@@ -25,7 +26,11 @@ function PreviewContent() {
   if (publishSuccess) {
     return (
       <AppShell>
-        <PublishSuccessCard sellerId={user?.id} />
+        <PublishSuccessCard
+          sellerId={user?.id}
+          onCreateAnother={clearPublishSuccess}
+          onDismiss={clearPublishSuccess}
+        />
       </AppShell>
     );
   }
@@ -48,7 +53,8 @@ function PreviewContent() {
   }
 
   const handlePublish = () => {
-    if (user) createListing(user);
+    if (!user || publishSuccess) return;
+    createListing(user);
   };
 
   return (
@@ -70,7 +76,7 @@ function PreviewContent() {
             saves it locally — a real backend will sync this later.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={handlePublish} size="lg">
+            <Button onClick={handlePublish} size="lg" disabled={publishSuccess} data-testid="publish-listing">
               Publish Listing
             </Button>
             <Link href="/sell">

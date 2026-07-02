@@ -15,6 +15,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { useUserListings } from "@/components/providers/user-listings-provider";
 import { getSellerById, getListingsBySeller } from "@/lib/marketplace-utils";
 import { sellerReviews } from "@/lib/mock-data";
+import { isDemoDataEnabled } from "@/lib/product-mode";
 import { User } from "lucide-react";
 
 export default function SellerProfilePage() {
@@ -31,6 +32,7 @@ export default function SellerProfilePage() {
           icon={User}
           title="Seller not found"
           description="This seller profile doesn't exist or has been removed."
+          testId="seller-not-found"
           action={
             <Link href="/marketplace">
               <Button>Back to Marketplace</Button>
@@ -42,7 +44,9 @@ export default function SellerProfilePage() {
   }
 
   const listings = getListingsBySeller(sellerId, userListings);
-  const reviews = sellerReviews.filter((r) => r.sellerId === sellerId);
+  const reviews = isDemoDataEnabled()
+    ? sellerReviews.filter((r) => r.sellerId === sellerId)
+    : [];
 
   return (
     <AppShell>

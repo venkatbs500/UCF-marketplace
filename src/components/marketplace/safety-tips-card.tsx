@@ -10,7 +10,7 @@ const TIPS = [
 
 export function SafetyTipsCard() {
   return (
-    <Card className="border-gold/20 bg-gold/5">
+    <Card className="border-gold/20 bg-gold/5" data-testid="safety-tips-card">
       <CardContent className="pt-5">
         <div className="mb-3 flex items-center gap-2">
           <Shield className="h-5 w-5 text-gold" />

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Mail, Shield, ArrowRight } from "lucide-react";
@@ -12,20 +12,38 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/providers/auth-provider";
 import { APP_NAME, TRUST_DISCLAIMER } from "@/lib/constants";
 
+const CALLBACK_ERROR_MESSAGE =
+  "We could not complete sign-in. Please request a new link and try again.";
+const MISSING_CODE_ERROR_MESSAGE =
+  "This sign-in link is missing required information. Please request a new link.";
+
 export function SignInCard() {
   const router = useRouter();
-  const { signInWithEmail } = useAuth();
+  const searchParams = useSearchParams();
+  const { signInWithEmail, authMode } = useAuth();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const queryError = useMemo(() => {
+    const errorParam = searchParams.get("error");
+    if (errorParam === "callback") return CALLBACK_ERROR_MESSAGE;
+    if (errorParam === "missing_code") return MISSING_CODE_ERROR_MESSAGE;
+    return "";
+  }, [searchParams]);
+
+  const displayError = error || queryError;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
     const result = await signInWithEmail(email);
     setLoading(false);
     if (result.success) {
+      setSuccess("Check your UCF email for your secure sign-in link.");
       router.push("/verify");
     } else {
       setError(result.error ?? "Something went wrong. Please try again.");
@@ -47,7 +65,7 @@ export function SignInCard() {
         </Link>
         <h1 className="mb-2 text-3xl font-bold">Welcome to {APP_NAME}</h1>
         <p className="text-sm text-muted">
-          Sign in with your UCF student email to join the verified campus network.
+          Use your UCF student email to receive a secure login link.
         </p>
       </div>
 
@@ -78,21 +96,37 @@ export function SignInCard() {
               </div>
             </div>
 
-            {error && (
-              <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400">
-                {error}
+            {displayError && (
+              <p
+                role="alert"
+                className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-400"
+              >
+                {displayError}
+              </p>
+            )}
+            {success && (
+              <p
+                role="status"
+                className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300"
+              >
+                {success}
               </p>
             )}
 
             <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? "Sending code..." : "Continue"}
+              {loading ? "Sending secure link..." : "Send secure sign-in link"}
               <ArrowRight className="h-4 w-4" />
             </Button>
           </form>
 
           <p className="mt-6 text-center text-xs text-muted">
-            We&apos;ll send a verification code to your inbox.{" "}
-            <span className="text-gold">Demo code: 123456</span>
+            We&apos;ll send a secure sign-in link to your inbox.
+            {authMode === "local" && (
+              <>
+                {" "}
+                <span className="text-gold">Demo code: 123456</span>
+              </>
+            )}
           </p>
         </CardContent>
       </Card>

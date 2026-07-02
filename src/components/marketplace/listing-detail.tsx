@@ -9,14 +9,20 @@ import { ListingGallery } from "./listing-gallery";
 import { ListingInfoPanel } from "./listing-info-panel";
 import { SellerSummaryCard } from "./seller-summary-card";
 import { ContactSellerPanel } from "./contact-seller-panel";
+import { ListingOwnerActions } from "./listing-owner-actions";
 import { SafetyTipsCard } from "./safety-tips-card";
 import { RelatedListings } from "./related-listings";
+import { useAuth } from "@/components/providers/auth-provider";
+import { canUserDeleteListing } from "@/lib/marketplace-utils";
 
 interface ListingDetailProps {
   listing: Listing;
 }
 
 export function ListingDetail({ listing }: ListingDetailProps) {
+  const { user } = useAuth();
+  const isOwner = canUserDeleteListing(listing, user?.id);
+
   return (
     <AppShell>
       <div className="mb-6">
@@ -35,8 +41,14 @@ export function ListingDetail({ listing }: ListingDetailProps) {
           <RelatedListings listing={listing} />
         </div>
         <div className="space-y-4">
-          <SellerSummaryCard listing={listing} />
-          <ContactSellerPanel />
+          {isOwner ? (
+            <ListingOwnerActions listing={listing} variant="detail" />
+          ) : (
+            <>
+              <SellerSummaryCard listing={listing} />
+              <ContactSellerPanel />
+            </>
+          )}
           <SafetyTipsCard />
         </div>
       </div>

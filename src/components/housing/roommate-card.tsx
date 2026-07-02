@@ -5,7 +5,8 @@ import { formatPrice } from "@/lib/utils";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
-import { ProtectedActionButton } from "@/components/auth/protected-action-button";
+import { ComingSoonAction } from "@/components/ui/coming-soon-action";
+import { COMING_SOON_MESSAGES } from "@/lib/coming-soon-messages";
 import { MapPin, Calendar, Sparkles } from "lucide-react";
 
 interface RoommateCardProps {
@@ -56,9 +57,13 @@ export function RoommateCard({ profile }: RoommateCardProps) {
         </div>
       </CardContent>
       <CardFooter className="border-t border-white/5 pt-3">
-        <ProtectedActionButton size="sm" className="w-full">
+        <ComingSoonAction
+          size="sm"
+          className="w-full"
+          comingSoonMessage={COMING_SOON_MESSAGES.contactRoommate}
+        >
           Connect
-        </ProtectedActionButton>
+        </ComingSoonAction>
       </CardFooter>
     </Card>
   );

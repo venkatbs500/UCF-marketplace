@@ -22,9 +22,10 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 
 interface AIToolCardProps {
   tool: AIStudyTool;
+  demoMode?: boolean;
 }
 
-export function AIToolCard({ tool }: AIToolCardProps) {
+export function AIToolCard({ tool, demoMode = false }: AIToolCardProps) {
   const Icon = iconMap[tool.icon] || SparklesFallback;
 
   return (
@@ -41,9 +42,11 @@ export function AIToolCard({ tool }: AIToolCardProps) {
         </div>
         <h3 className="mb-1 font-semibold">{tool.name}</h3>
         <p className="mb-3 text-sm text-muted">{tool.description}</p>
-        <span className="text-xs text-gold">
-          {tool.usageCount.toLocaleString()} students used this
-        </span>
+        {demoMode && (
+          <span className="text-xs text-gold">
+            {tool.usageCount.toLocaleString()} students used this
+          </span>
+        )}
       </CardContent>
     </Card>
   );

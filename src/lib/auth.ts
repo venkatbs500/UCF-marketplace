@@ -73,6 +73,8 @@ function parseAuthSession(raw: string): AuthSession {
   const pendingEmail =
     typeof data.pendingEmail === "string" ? data.pendingEmail : null;
 
+  if (!user && !pendingEmail) return EMPTY_SESSION;
+
   return { user, pendingEmail };
 }
 
@@ -85,6 +87,9 @@ const EMPTY_SESSION: AuthSession = {
   user: null,
   pendingEmail: null,
 };
+
+let sessionCache: AuthSession = EMPTY_SESSION;
+let sessionCacheKey: string | null = "__unset__";
 
 export function isUcfEmail(email: string): boolean {
   const normalized = email.trim().toLowerCase();
@@ -119,22 +124,37 @@ export function loadSession(): AuthSession {
 
   try {
     const raw = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!raw) return EMPTY_SESSION;
-    return parseAuthSession(raw);
+    if (raw === sessionCacheKey) return sessionCache;
+    sessionCacheKey = raw;
+    if (!raw) {
+      sessionCache = EMPTY_SESSION;
+      return sessionCache;
+    }
+    sessionCache = parseAuthSession(raw);
+    return sessionCache;
   } catch {
-    return EMPTY_SESSION;
+    sessionCache = EMPTY_SESSION;
+    sessionCacheKey = null;
+    return sessionCache;
   }
 }
 
 export function saveSession(session: AuthSession): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  const normalized =
+    !session.user && !session.pendingEmail ? EMPTY_SESSION : session;
+  const raw = JSON.stringify(normalized);
+  localStorage.setItem(SESSION_STORAGE_KEY, raw);
+  sessionCache = normalized;
+  sessionCacheKey = raw;
   notifySessionChange();
 }
 
 export function clearSession(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(SESSION_STORAGE_KEY);
+  sessionCache = EMPTY_SESSION;
+  sessionCacheKey = null;
   notifySessionChange();
 }
 
@@ -196,6 +216,6 @@ export function applyOnboardingToUser(
 }
 
 export const UCF_EMAIL_ERROR =
-  "Knight Market is currently limited to UCF student emails.";
+  "Knight Market is currently limited to verified UCF student emails.";
 
 export const INVALID_CODE_ERROR = "Invalid verification code. Please try again.";

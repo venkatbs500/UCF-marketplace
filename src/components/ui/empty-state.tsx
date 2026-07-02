@@ -7,6 +7,7 @@ interface EmptyStateProps {
   description: string;
   action?: React.ReactNode;
   className?: string;
+  testId?: string;
 }
 
 export function EmptyState({
@@ -15,9 +16,11 @@ export function EmptyState({
   description,
   action,
   className,
+  testId,
 }: EmptyStateProps) {
   return (
     <div
+      data-testid={testId}
       className={cn(
         "flex flex-col items-center justify-center rounded-2xl glass-card p-12 text-center",
         className
