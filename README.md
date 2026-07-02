@@ -84,6 +84,16 @@ NEXT_PUBLIC_PRODUCT_MODE=real
 
 Full setup guide: [docs/supabase-auth-setup.md](docs/supabase-auth-setup.md)
 
+### Supabase Database Schema
+
+The full production schema (tables, RLS, storage buckets) is prepared in SQL but **not wired to the frontend yet**:
+
+- Migration: [supabase/sql/001_core_product_schema.sql](supabase/sql/001_core_product_schema.sql)
+- Setup guide: [docs/supabase-core-schema-setup.md](docs/supabase-core-schema-setup.md)
+- Rollback: [supabase/sql/001_core_product_schema_rollback.sql](supabase/sql/001_core_product_schema_rollback.sql)
+
+Apply the SQL in the Supabase SQL Editor when ready. The app continues using localStorage for marketplace data until a future sprint connects `supabase-marketplace-service.ts`.
+
 ---
 
 ## Product Data Modes
@@ -106,12 +116,14 @@ Developers can still append `?demo=1` in local development to preview mock catal
 
 ### Current limitations (real mode)
 
-- Listings are stored in **localStorage**, not Supabase yet
-- **Messaging** is coming next — contact buttons show honest coming-soon copy
-- **Real image upload** is coming next
+- Supabase **core schema is prepared** (profiles, listings, housing, messaging, etc.) — see [docs/supabase-core-schema-setup.md](docs/supabase-core-schema-setup.md)
+- **Frontend integration is pending** — listings still use localStorage, not Supabase queries
+- **Messaging** shows honest coming-soon copy
+- **Real image upload** is coming next (storage buckets exist in SQL)
 - Housing, jobs, events, tutoring, discounts, AI, and lost & found show **coming soon** empty states
 - Home page shows **honest module statuses** — no fake campus counts or preview people
 - Only the **marketplace** accepts real student posts locally; other modules are not live yet
+- **E2E/CI** still uses `local` auth + `demo` product mode
 
 ---
 
@@ -125,7 +137,7 @@ Providers use abstractions in `src/lib/services/` so localStorage can be swapped
 | Marketplace | `marketplace-service.ts` | `local-marketplace-service.ts` |
 | Storage helpers | `storage-service.ts` | Safe JSON + SSR fallbacks |
 
-See [docs/backend-migration-plan.md](docs/backend-migration-plan.md) for the proposed database schema and migration order.
+See [docs/backend-migration-plan.md](docs/backend-migration-plan.md) for the database schema, RLS summary, and frontend integration order.
 
 ---
 
@@ -154,9 +166,10 @@ Dev-only error demo: `/dev/error-demo`
 
 ## Known Limitations
 
-- Marketplace listings remain localStorage-based (Supabase powers auth only)
+- Supabase core schema SQL is ready; marketplace listings remain localStorage-based until wired
 - Real product mode hides mock catalog data; messaging and housing tools show coming-soon states
-- No payments, real image upload, or AI API
+- No payments, real image upload UI, or AI API yet
+- E2E uses local/demo mode; production real mode requires Supabase schema applied manually
 - CI badge URL needs your GitHub repo path
 
 ---
@@ -167,7 +180,8 @@ Dev-only error demo: `/dev/error-demo`
 src/app/              # Next.js routes
 src/components/       # UI + providers
 src/lib/services/     # Auth/marketplace abstraction (migration seam)
-docs/                 # Backend migration plan
+docs/                 # Backend migration + Supabase setup guides
+supabase/sql/         # Core product schema SQL (apply in Dashboard)
 tests/e2e/            # Playwright specs
 .github/workflows/    # CI
 ```
