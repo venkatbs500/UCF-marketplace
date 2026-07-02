@@ -17,21 +17,29 @@ interface ListingPreviewCardProps {
   draft: ListingDraft;
   sellerName?: string;
   sellerInitials?: string;
+  previewImageUrls?: string[];
 }
 
 export function ListingPreviewCard({
   draft,
   sellerName = "You",
   sellerInitials = "YO",
+  previewImageUrls,
 }: ListingPreviewCardProps) {
   const category = MARKETPLACE_CATEGORIES.find((c) => c.id === draft.category);
-  const image = draft.images[0] ?? "📦";
+  const image = previewImageUrls?.[0] ?? draft.images[0] ?? "📦";
   const price = draft.price === "" ? 0 : Number(draft.price);
+  const isUrlImage = typeof image === "string" && image.startsWith("http");
 
   return (
     <Card className="max-w-md">
-      <div className="flex h-40 items-center justify-center rounded-t-2xl bg-gradient-to-br from-white/10 to-white/5 text-6xl">
-        {image}
+      <div className="flex h-40 items-center justify-center overflow-hidden rounded-t-2xl bg-gradient-to-br from-white/10 to-white/5 text-6xl">
+        {isUrlImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={image} alt="" className="h-full w-full object-cover" />
+        ) : (
+          image
+        )}
       </div>
       <CardContent className="space-y-3 pt-4">
         <h3 className="font-semibold">{draft.title || "Untitled listing"}</h3>

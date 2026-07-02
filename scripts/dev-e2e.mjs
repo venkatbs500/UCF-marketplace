@@ -6,9 +6,11 @@ const env = {
   NEXT_PUBLIC_PRODUCT_MODE: "demo",
 };
 
+const E2E_PORT = "3100";
+
 const child = spawn(
   process.platform === "win32" ? "npx.cmd" : "npx",
-  ["next", "dev", "--hostname", "127.0.0.1", "-p", "3000"],
+  ["next", "dev", "--hostname", "127.0.0.1", "-p", E2E_PORT],
   {
     env,
     stdio: "inherit",

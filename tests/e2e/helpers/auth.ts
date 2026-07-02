@@ -8,7 +8,7 @@ const STORAGE_KEYS = [
 ];
 
 export async function clearKnightMarketStorage(page: Page) {
-  await page.goto("/");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.evaluate((keys) => {
     keys.forEach((key) => localStorage.removeItem(key));
   }, STORAGE_KEYS);

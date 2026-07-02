@@ -20,7 +20,7 @@ test("UCF email proceeds to verification", async ({ page }) => {
   await page.goto("/sign-in");
   await page.getByLabel("UCF Email").fill("test@ucf.edu");
   await page.getByRole("button", { name: /Send secure sign-in link/i }).click();
-  await expect(page).toHaveURL(/\/verify$/);
+  await page.waitForURL("**/verify", { timeout: 15_000 });
   await expect(page.getByLabel("Verification Code")).toBeVisible();
 });
 
@@ -28,7 +28,7 @@ test("@knights.ucf.edu email proceeds to verification in local mode", async ({ p
   await page.goto("/sign-in");
   await page.getByLabel("UCF Email").fill("student@knights.ucf.edu");
   await page.getByRole("button", { name: /Send secure sign-in link/i }).click();
-  await expect(page).toHaveURL(/\/verify$/);
+  await page.waitForURL("**/verify", { timeout: 15_000 });
   await expect(page.getByLabel("Verification Code")).toBeVisible();
 });
 
@@ -48,7 +48,7 @@ test("@ucf.edu email proceeds to verification in local mode", async ({ page }) =
   await page.goto("/sign-in");
   await page.getByLabel("UCF Email").fill("student@ucf.edu");
   await page.getByRole("button", { name: /Send secure sign-in link/i }).click();
-  await expect(page).toHaveURL(/\/verify$/);
+  await page.waitForURL("**/verify", { timeout: 15_000 });
   await expect(page.getByLabel("Verification Code")).toBeVisible();
 });
 

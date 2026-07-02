@@ -118,7 +118,11 @@ export function canUserDeleteListing(
   userId: string | null | undefined
 ): boolean {
   if (!userId) return false;
-  return listing.sellerId === userId && isUserCreatedListing(listing);
+  if (listing.sellerId !== userId) return false;
+  if (isUserCreatedListing(listing)) return true;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    listing.id
+  );
 }
 
 export function getListingById(

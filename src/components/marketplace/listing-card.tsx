@@ -12,6 +12,7 @@ import { SaveListingButton } from "./save-listing-button";
 import { ListingOwnerActions } from "./listing-owner-actions";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canUserDeleteListing } from "@/lib/marketplace-utils";
+import { isListingImageUrl } from "@/lib/marketplace-mode";
 import { MapPin, MessageCircle, Star } from "lucide-react";
 
 const conditionLabels: Record<string, string> = {
@@ -35,6 +36,7 @@ export function ListingCard({
   const image = listing.images[0] ?? "📦";
   const isOwner = canUserDeleteListing(listing, user?.id);
   const detailHref = `/marketplace/${listing.id}`;
+  const showImage = isListingImageUrl(image);
 
   return (
     <Card
@@ -50,8 +52,13 @@ export function ListingCard({
       />
 
       <div className="pointer-events-none relative z-[1] flex flex-1 flex-col">
-        <div className="relative mb-3 flex h-36 items-center justify-center rounded-xl bg-gradient-to-br from-white/5 to-white/10 text-5xl">
-          {image}
+        <div className="relative mb-3 flex h-36 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-white/5 to-white/10 text-5xl">
+          {showImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image} alt="" className="h-full w-full object-cover" />
+          ) : (
+            image
+          )}
           {isOwner && (
             <Badge className="absolute top-3 left-3" variant="outline">
               Your listing

@@ -10,6 +10,10 @@ import {
 import { getStudentEmailError, normalizeEmail } from "@/lib/auth-domain";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
+  fetchSupabaseProfile,
+  upsertSupabaseProfile,
+} from "@/lib/services/supabase-marketplace-service";
+import {
   getSupabaseConfigIssues,
   hasSupabaseEnv,
   SUPABASE_REACHABILITY_ERROR,
@@ -39,9 +43,6 @@ function mapSupabaseAuthError(error: unknown): string {
 }
 
 const PENDING_EMAIL_KEY = "knight-market-supabase-pending-email";
-const ONBOARDING_PROFILE_KEY = "knight-market-supabase-onboarding-profiles";
-
-type StoredOnboardingProfiles = Record<string, Omit<AuthUser, "id" | "email"> & { name: string }>;
 
 let sessionCache: AuthSession = readInitialSession();
 const listeners = new Set<() => void>();
@@ -78,41 +79,16 @@ function readInitialSession(): AuthSession {
   return { user: null, pendingEmail: readPendingEmail() };
 }
 
-function readOnboardingProfiles(): StoredOnboardingProfiles {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(ONBOARDING_PROFILE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as StoredOnboardingProfiles;
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-}
+async function resolveAuthUser(email: string, userId: string): Promise<AuthUser> {
+  const profile = await fetchSupabaseProfile(userId, email);
+  if (profile) return profile;
 
-function saveOnboardingProfiles(profiles: StoredOnboardingProfiles) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(ONBOARDING_PROFILE_KEY, JSON.stringify(profiles));
-}
-
-function buildUser(email: string, userId: string): AuthUser {
   const base = createUserFromEmail(email);
-  const profiles = readOnboardingProfiles();
-  const profile = profiles[userId] ?? profiles[normalizeEmail(email)];
-
-  if (!profile) {
-    return {
-      ...base,
-      id: userId,
-      hasCompletedOnboarding: false,
-    };
-  }
-
   return {
     ...base,
     id: userId,
-    ...profile,
-    hasCompletedOnboarding: true,
+    hasCompletedOnboarding: false,
+    isVerifiedStudent: !getStudentEmailError(email),
   };
 }
 
@@ -134,7 +110,7 @@ async function refreshSessionFromSupabase() {
 
   writePendingEmail(null);
   setSession({
-    user: buildUser(email, userId),
+    user: await resolveAuthUser(email, userId),
     pendingEmail: null,
   });
 }
@@ -152,9 +128,11 @@ function ensureAuthSubscription() {
       return;
     }
     writePendingEmail(null);
-    setSession({
-      user: buildUser(email, userId),
-      pendingEmail: null,
+    void resolveAuthUser(email, userId).then((user) => {
+      setSession({
+        user,
+        pendingEmail: null,
+      });
     });
   });
 
@@ -236,22 +214,14 @@ export const supabaseAuthService: AuthService = {
       return { success: false, error: "Select at least one interest." };
     }
     const updated = applyOnboardingToUser(user, data);
-    const profiles = readOnboardingProfiles();
-    profiles[user.id] = {
-      name: updated.name,
-      avatarInitials: updated.avatarInitials,
-      major: updated.major,
-      year: updated.year,
-      campusArea: updated.campusArea,
-      interests: updated.interests,
-      trustScore: updated.trustScore,
-      isVerifiedStudent: updated.isVerifiedStudent,
-      hasCompletedOnboarding: updated.hasCompletedOnboarding,
-      joinedAt: updated.joinedAt,
-      bio: updated.bio,
-    };
-    saveOnboardingProfiles(profiles);
-    setSession({ user: updated, pendingEmail: readPendingEmail() });
+    const result = await upsertSupabaseProfile(updated);
+    if (!result.success || !result.user) {
+      return {
+        success: false,
+        error: result.error ?? "We could not save your profile. Please try again.",
+      };
+    }
+    setSession({ user: result.user, pendingEmail: readPendingEmail() });
     return { success: true };
   },
   signOut(): void {

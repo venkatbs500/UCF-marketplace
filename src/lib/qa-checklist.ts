@@ -226,9 +226,10 @@ export const QA_CHECKLIST: QACheckSection[] = [
       },
       {
         id: "sell-publish",
-        label: "Publish stores local listing",
+        label: "Publish stores listing",
         steps: ["On preview, click Publish"],
-        expected: "Listing saved with status active. Success card shown.",
+        expected:
+          "Local/demo: listing saved in localStorage. Supabase real mode: row in public.listings + images in Storage.",
         status: "manual",
       },
       {
@@ -731,6 +732,42 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Your listing badge",
         steps: ["Publish a listing", "View it on /marketplace"],
         expected: '"Your listing" badge visible. Message Seller hidden on own card.',
+        status: "manual",
+      },
+    ],
+  },
+  {
+    id: "supabase-marketplace",
+    title: "Supabase Marketplace (Real Mode)",
+    description:
+      "When NEXT_PUBLIC_AUTH_MODE=supabase and NEXT_PUBLIC_PRODUCT_MODE=real.",
+    items: [
+      {
+        id: "sb-profile-sync",
+        label: "Profile sync on onboarding",
+        steps: ["Sign in with UCF email", "Complete onboarding"],
+        expected: "public.profiles row created/updated with onboarding fields.",
+        status: "manual",
+      },
+      {
+        id: "sb-image-upload",
+        label: "Real listing image upload",
+        steps: ["Visit /sell", "Upload JPEG/PNG/WebP on step 3", "Publish"],
+        expected: "Files in listing-images/{userId}/. Listing shows real photos.",
+        status: "manual",
+      },
+      {
+        id: "sb-marketplace-read",
+        label: "Marketplace reads Supabase listings",
+        steps: ["After publish, visit /marketplace"],
+        expected: "Active listings from public.listings. No mock catalog mixed in.",
+        status: "manual",
+      },
+      {
+        id: "sb-owner-delete",
+        label: "Owner delete via Supabase",
+        steps: ["Delete own listing from profile or detail"],
+        expected: "Row removed from listings. UI updates on marketplace and profile.",
         status: "manual",
       },
     ],

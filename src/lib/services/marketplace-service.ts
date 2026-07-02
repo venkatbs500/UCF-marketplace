@@ -12,8 +12,9 @@ export type DeleteListingResult = {
 };
 
 /**
- * Marketplace service contract — swap `localMarketplaceService` for Supabase
- * queries/mutations when the backend is ready.
+ * Local marketplace service contract (draft/saved listings in localStorage).
+ * Supabase read/write lives in `supabase-marketplace-service.ts` and is selected
+ * via `usesSupabaseMarketplace()` when AUTH_MODE=supabase and PRODUCT_MODE=real.
  */
 export interface MarketplaceService {
   subscribe(listener: () => void): () => void;

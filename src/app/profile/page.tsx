@@ -12,6 +12,7 @@ import { useSavedListings } from "@/components/providers/saved-listings-provider
 import { useUserListings } from "@/components/providers/user-listings-provider";
 import { reviews } from "@/lib/mock-data";
 import { isDemoDataEnabled } from "@/lib/product-mode";
+import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
 import { formatDate } from "@/lib/utils";
 import { Shield, Star, Package, Heart, Activity, MapPin, Calendar } from "lucide-react";
 import { ProfileTabs } from "./profile-tabs";
@@ -21,8 +22,9 @@ import { Button } from "@/components/ui/button";
 function ProfileContent() {
   const { user } = useAuth();
   const { savedListingIds } = useSavedListings();
-  const { userListings } = useUserListings();
+  const { userListings, userListingsError, isLoading: listingsLoading } = useUserListings();
   const demoEnabled = isDemoDataEnabled();
+  const supabaseMode = usesSupabaseMarketplace();
 
   if (!user) return null;
 
@@ -126,12 +128,27 @@ function ProfileContent() {
             </Button>
           </Link>
         </div>
-        {myPosted.length > 0 ? (
+        {userListingsError && (
+          <p role="alert" className="mb-4 text-sm text-red-400">
+            We could not load your listings. Please try again.
+          </p>
+        )}
+        {listingsLoading ? (
+          <Card>
+            <CardContent className="py-8 text-center text-sm text-muted">
+              Loading your listings...
+            </CardContent>
+          </Card>
+        ) : myPosted.length > 0 ? (
           <ListingGrid listings={myPosted} ownerActionVariant="profile" />
         ) : (
           <Card>
             <CardContent className="py-8 text-center">
-              <p className="mb-4 text-sm text-muted">No posted listings yet</p>
+              <p className="mb-4 text-sm text-muted">
+                {supabaseMode
+                  ? "You have not posted any listings yet."
+                  : "No posted listings yet"}
+              </p>
               <Link href="/sell">
                 <Button>Post a listing</Button>
               </Link>

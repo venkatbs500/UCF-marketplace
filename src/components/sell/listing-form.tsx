@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { CAMPUS_AREA_OPTIONS } from "@/lib/onboarding-options";
 import { MARKETPLACE_CATEGORIES } from "@/lib/constants";
 import { MOCK_IMAGE_PLACEHOLDERS, PICKUP_OPTIONS } from "@/lib/marketplace-utils";
+import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
 import { useUserListings } from "@/components/providers/user-listings-provider";
+import { ListingImageUploader } from "./listing-image-uploader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,7 +17,14 @@ import type { ListingCondition, MarketplaceCategory } from "@/lib/types";
 
 export function ListingForm() {
   const router = useRouter();
-  const { currentDraft, updateDraft } = useUserListings();
+  const {
+    currentDraft,
+    updateDraft,
+    selectedImageFiles,
+    imagePreviewUrls,
+    setSelectedImageFiles,
+  } = useUserListings();
+  const supabaseMode = usesSupabaseMarketplace();
   const [step, setStep] = useState(1);
   const [tagInput, setTagInput] = useState("");
 
@@ -54,6 +63,10 @@ export function ListingForm() {
     currentDraft.location.trim();
 
   const canContinueStep2 = currentDraft.description.trim().length >= 20;
+
+  const canContinueStep3 = supabaseMode
+    ? selectedImageFiles.length > 0
+    : true;
 
   const goToPreview = () => {
     router.push("/sell/preview");
@@ -255,31 +268,46 @@ export function ListingForm() {
       {step === 3 && (
         <Card className="max-w-2xl">
           <CardContent className="space-y-5 pt-6">
-            <p className="text-sm text-muted">
-              Select placeholder images for your listing. Real uploads coming soon.
-            </p>
-            <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
-              {MOCK_IMAGE_PLACEHOLDERS.map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => toggleImage(emoji)}
-                  className={cn(
-                    "flex aspect-square items-center justify-center rounded-2xl text-3xl transition-all",
-                    currentDraft.images.includes(emoji)
-                      ? "bg-gold/20 ring-2 ring-gold"
-                      : "bg-white/5 hover:bg-white/10"
-                  )}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
+            {supabaseMode ? (
+              <>
+                <p className="text-sm text-muted">
+                  Add real photos of your item. Buyers trust listings with clear images.
+                </p>
+                <ListingImageUploader
+                  files={selectedImageFiles}
+                  previewUrls={imagePreviewUrls}
+                  onChange={setSelectedImageFiles}
+                />
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-muted">
+                  Select placeholder images for your listing. Real uploads coming soon.
+                </p>
+                <div className="grid grid-cols-4 gap-3 sm:grid-cols-8">
+                  {MOCK_IMAGE_PLACEHOLDERS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => toggleImage(emoji)}
+                      className={cn(
+                        "flex aspect-square items-center justify-center rounded-2xl text-3xl transition-all",
+                        currentDraft.images.includes(emoji)
+                          ? "bg-gold/20 ring-2 ring-gold"
+                          : "bg-white/5 hover:bg-white/10"
+                      )}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <div className="flex gap-2">
               <Button variant="secondary" onClick={() => setStep(2)}>
                 Back
               </Button>
-              <Button className="flex-1" onClick={() => setStep(4)}>
+              <Button className="flex-1" disabled={!canContinueStep3} onClick={() => setStep(4)}>
                 Continue to Preview
               </Button>
             </div>

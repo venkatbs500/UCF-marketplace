@@ -8,18 +8,21 @@ import { AppShell } from "@/components/layout/app-shell";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Button } from "@/components/ui/button";
 import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ListingGrid } from "@/components/marketplace/listing-grid";
 import {
   MarketplaceSearchControls,
   DEFAULT_MARKETPLACE_SEARCH,
 } from "@/components/marketplace/marketplace-search-state";
 import { useUserListings } from "@/components/providers/user-listings-provider";
+import { useMarketplaceBrowseListings } from "@/hooks/use-marketplace-browse-listings";
 import {
   filterAndSortListings,
   getBrowseListings,
   getMarketplaceBrowseLayout,
 } from "@/lib/marketplace-utils";
 import { isDemoDataEnabledWithOverride } from "@/lib/product-mode";
+import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
 
 export default function MarketplacePage() {
   return (
@@ -37,14 +40,24 @@ export default function MarketplacePage() {
 
 function MarketplacePageContent() {
   const searchParams = useSearchParams();
-  const { userListings } = useUserListings();
+  const { userListings, listingsVersion } = useUserListings();
   const [searchState, setSearchState] = useState(DEFAULT_MARKETPLACE_SEARCH);
   const demoEnabled = isDemoDataEnabledWithOverride(searchParams);
+  const supabaseMode = usesSupabaseMarketplace();
 
-  const allListings = useMemo(
-    () => getBrowseListings(userListings, { includeDemo: demoEnabled }),
-    [userListings, demoEnabled]
-  );
+  const {
+    listings: supabaseListings,
+    loading: supabaseLoading,
+    error: supabaseError,
+  } = useMarketplaceBrowseListings({
+    enabled: supabaseMode,
+    refreshKey: listingsVersion,
+  });
+
+  const allListings = useMemo(() => {
+    if (supabaseMode) return supabaseListings;
+    return getBrowseListings(userListings, { includeDemo: demoEnabled });
+  }, [supabaseMode, supabaseListings, userListings, demoEnabled]);
 
   const filtered = useMemo(
     () => filterAndSortListings(allListings, searchState),
@@ -56,7 +69,8 @@ function MarketplacePageContent() {
     [filtered, searchState]
   );
 
-  const isRealEmpty = !demoEnabled && allListings.length === 0;
+  const isRealEmpty = !demoEnabled && !supabaseMode && allListings.length === 0;
+  const isSupabaseEmpty = supabaseMode && !supabaseLoading && allListings.length === 0;
   const listingDeleted = searchParams.get("listingDeleted") === "1";
 
   return (
@@ -94,12 +108,6 @@ function MarketplacePageContent() {
         </div>
       </div>
 
-      {!demoEnabled && userListings.length > 0 && (
-        <p className="mb-6 text-xs text-muted">
-          Real image uploads are coming next. Listings may show placeholder previews for now.
-        </p>
-      )}
-
       <div className="mb-8">
         <MarketplaceSearchControls
           state={searchState}
@@ -107,33 +115,50 @@ function MarketplacePageContent() {
         />
       </div>
 
-      {showFeaturedSection && (
-        <section className="mb-10" data-testid="featured-listings-section">
-          <h3 className="mb-4 text-lg font-semibold text-gold">Featured Listings</h3>
-          <ListingGrid listings={featured} />
-        </section>
+      {supabaseLoading && (
+        <LoadingSpinner className="min-h-[30vh]" label="Loading listings..." />
       )}
 
-      <section data-testid="browse-listings-section">
-        <h3 className="mb-4 text-lg font-semibold">
-          {resultCount} Listing{resultCount !== 1 ? "s" : ""}
-        </h3>
-        <ListingGrid
-          listings={browseListings}
-          showSellCta
-          emptyTitle={
-            isRealEmpty
-              ? "No student listings yet"
-              : "No listings match your search"
-          }
-          emptyDescription={
-            isRealEmpty
-              ? "Be the first verified student to post something on Knight Market."
-              : "Try different filters or post something new."
-          }
-          emptyPrimaryLabel={isRealEmpty ? "Post the first listing" : undefined}
-        />
-      </section>
+      {supabaseError && !supabaseLoading && (
+        <div
+          role="alert"
+          className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+        >
+          We could not load listings. Please try again.
+        </div>
+      )}
+
+      {!supabaseLoading && (
+        <>
+          {showFeaturedSection && (
+            <section className="mb-10" data-testid="featured-listings-section">
+              <h3 className="mb-4 text-lg font-semibold text-gold">Featured Listings</h3>
+              <ListingGrid listings={featured} />
+            </section>
+          )}
+
+          <section data-testid="browse-listings-section">
+            <h3 className="mb-4 text-lg font-semibold">
+              {resultCount} Listing{resultCount !== 1 ? "s" : ""}
+            </h3>
+            <ListingGrid
+              listings={browseListings}
+              showSellCta
+              emptyTitle={
+                isRealEmpty || isSupabaseEmpty
+                  ? "No student listings yet"
+                  : "No listings match your search"
+              }
+              emptyDescription={
+                isRealEmpty || isSupabaseEmpty
+                  ? "Be the first verified student to post something on Knight Market."
+                  : "Try different filters or post something new."
+              }
+              emptyPrimaryLabel={isRealEmpty || isSupabaseEmpty ? "Post the first listing" : undefined}
+            />
+          </section>
+        </>
+      )}
     </AppShell>
   );
 }

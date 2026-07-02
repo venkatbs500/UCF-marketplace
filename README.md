@@ -110,20 +110,36 @@ If unset:
 - `NEXT_PUBLIC_AUTH_MODE=supabase` → defaults to **real**
 - `NEXT_PUBLIC_AUTH_MODE=local` → defaults to **demo**
 
-E2E (`npm run dev:e2e`) sets both `NEXT_PUBLIC_AUTH_MODE=local` and `NEXT_PUBLIC_PRODUCT_MODE=demo`.
+E2E (`npm run dev:e2e`) sets both `NEXT_PUBLIC_AUTH_MODE=local` and `NEXT_PUBLIC_PRODUCT_MODE=demo`, and runs the test server on **port 3100** (isolated from your dev server on 3000).
 
 Developers can still append `?demo=1` in local development to preview mock catalog data while `PRODUCT_MODE=real` — this is not exposed in the product UI.
 
 ### Current limitations (real mode)
 
-- Supabase **core schema is prepared** (profiles, listings, housing, messaging, etc.) — see [docs/supabase-core-schema-setup.md](docs/supabase-core-schema-setup.md)
-- **Frontend integration is pending** — listings still use localStorage, not Supabase queries
+- Supabase **core schema is prepared** — see [docs/supabase-core-schema-setup.md](docs/supabase-core-schema-setup.md)
+- **Marketplace listings** use Supabase when `NEXT_PUBLIC_AUTH_MODE=supabase` and `NEXT_PUBLIC_PRODUCT_MODE=real`
+- **Saved listings** still use localStorage (Supabase `saved_listings` table ready but not wired)
 - **Messaging** shows honest coming-soon copy
-- **Real image upload** is coming next (storage buckets exist in SQL)
 - Housing, jobs, events, tutoring, discounts, AI, and lost & found show **coming soon** empty states
 - Home page shows **honest module statuses** — no fake campus counts or preview people
-- Only the **marketplace** accepts real student posts locally; other modules are not live yet
 - **E2E/CI** still uses `local` auth + `demo` product mode
+
+### Manual Supabase marketplace test
+
+1. Set `.env.local`:
+   ```bash
+   NEXT_PUBLIC_SUPABASE_URL=https://<project>.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
+   NEXT_PUBLIC_AUTH_MODE=supabase
+   NEXT_PUBLIC_PRODUCT_MODE=real
+   ```
+2. Restart: `npm run dev`
+3. Sign in with a UCF email and complete onboarding
+4. Visit `/sell`, upload a real image (JPEG/PNG/WebP), and publish
+5. Verify **Table Editor → listings** has a new row
+6. Verify **Storage → listing-images** has a file under `{your-user-id}/`
+7. Verify `/marketplace`, listing detail, and `/profile` show the listing
+8. Delete the listing and confirm it disappears
 
 ---
 
@@ -166,9 +182,9 @@ Dev-only error demo: `/dev/error-demo`
 
 ## Known Limitations
 
-- Supabase core schema SQL is ready; marketplace listings remain localStorage-based until wired
+- Supabase marketplace is live in real+supabase mode; saved listings remain localStorage
 - Real product mode hides mock catalog data; messaging and housing tools show coming-soon states
-- No payments, real image upload UI, or AI API yet
+- No payments or AI API yet
 - E2E uses local/demo mode; production real mode requires Supabase schema applied manually
 - CI badge URL needs your GitHub repo path
 

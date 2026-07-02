@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProductMode, isDemoDataEnabled, isRealDataMode } from "@/lib/product-mode";
+import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
 
 type SystemStatus = "ready" | "not-connected";
 
@@ -33,16 +34,44 @@ const STATUS_ROWS: StatusRow[] = [
     detail: isRealDataMode() ? "active" : "demo mock visible",
   },
   { label: "Coming-Soon Actions", status: "ready" },
-  { label: "Owner Listing Delete (local)", status: "ready" },
+  {
+    label: "Supabase Profile Sync",
+    status: usesSupabaseMarketplace() ? "ready" : "not-connected",
+    detail: usesSupabaseMarketplace() ? "profiles table" : "local/demo mode",
+  },
+  {
+    label: "Supabase Marketplace Listings",
+    status: usesSupabaseMarketplace() ? "ready" : "not-connected",
+    detail: usesSupabaseMarketplace() ? "listings table" : "localStorage",
+  },
+  {
+    label: "Supabase Listing Image Upload",
+    status: usesSupabaseMarketplace() ? "ready" : "not-connected",
+    detail: usesSupabaseMarketplace() ? "listing-images bucket" : "emoji placeholders",
+  },
+  {
+    label: "Owner Listing Delete",
+    status: "ready",
+    detail: usesSupabaseMarketplace() ? "Supabase RLS" : "local",
+  },
   { label: "GitHub Actions CI", status: "ready" },
   { label: "Error Boundaries", status: "ready" },
   { label: "E2E Tests", status: "ready" },
   { label: "Backend Abstraction", status: "ready" },
+  {
+    label: "Real Marketplace Backend",
+    status: usesSupabaseMarketplace() ? "ready" : "not-connected",
+    detail: usesSupabaseMarketplace() ? "Supabase" : "localStorage in real UI",
+  },
   { label: "Featured Listing Dedupe", status: "ready" },
   { label: "Type Check", status: "ready" },
   { label: "Route Smoke", status: "ready" },
   { label: "Backend Migration Plan", status: "ready" },
-  { label: "Database", status: "not-connected" },
+  {
+    label: "Database",
+    status: usesSupabaseMarketplace() ? "ready" : "not-connected",
+    detail: usesSupabaseMarketplace() ? "schema applied" : "SQL prepared",
+  },
   { label: "Payments", status: "not-connected" },
   { label: "Real Chat", status: "not-connected" },
   { label: "AI API", status: "not-connected" },

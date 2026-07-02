@@ -32,19 +32,14 @@ export function ListingOwnerActions({
   }
 
   const handleConfirmDelete = () => {
-    const result = deleteListing(listing.id, user);
-    setConfirmOpen(false);
-
-    if (!result.success) {
+    void deleteListing(listing.id, user).then((result) => {
       setConfirmOpen(false);
-      return;
-    }
-
-    onDeleted?.();
-
-    if (variant === "detail") {
-      router.push("/marketplace?listingDeleted=1");
-    }
+      if (!result.success) return;
+      onDeleted?.();
+      if (variant === "detail") {
+        router.push("/marketplace?listingDeleted=1");
+      }
+    });
   };
 
   const openConfirm = (event: React.MouseEvent) => {
