@@ -12,6 +12,7 @@ import type { ReportItem, ReportStatus } from "@/lib/services/report-types";
 import { isModerationRealtimeMode, REPORT_STATUS_OPTIONS } from "@/lib/services/report-service";
 import { formatRelativeTime } from "@/lib/utils";
 import { Shield, Lock } from "lucide-react";
+import type { getAdminDebugInfo } from "@/lib/admin";
 
 export function AdminDashboard() {
   const [reports, setReports] = useState<ReportItem[]>([]);
@@ -278,19 +279,44 @@ export function AdminDashboard() {
   );
 }
 
-export function AdminLockedState() {
+type AdminDebugInfo = ReturnType<typeof getAdminDebugInfo>;
+
+type AdminLockedStateProps = {
+  debugInfo: AdminDebugInfo;
+};
+
+export function AdminLockedState({ debugInfo }: AdminLockedStateProps) {
   return (
     <div className="flex flex-col items-center justify-center rounded-3xl glass-card p-12 text-center">
       <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gold/10">
         <Lock className="h-8 w-8 text-gold" />
       </div>
       <h2 className="mb-2 text-2xl font-bold">Admin Access Required</h2>
+      <div className="mb-5 w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-4 text-left text-sm">
+        <p className="mb-2 text-muted">
+          Signed-in email:{" "}
+          <span className="font-mono text-foreground">{debugInfo.currentEmail ?? "none"}</span>
+        </p>
+        <p className="mb-1 text-muted">
+          NEXT_PUBLIC_ADMIN_EMAILS configured:{" "}
+          <span className="text-foreground">
+            {debugInfo.hasConfiguredEnv ? "yes" : "no"}
+          </span>
+        </p>
+        <p className="mb-1 text-muted">
+          Normalized admin email count:{" "}
+          <span className="text-foreground">{debugInfo.adminEmailCount}</span>
+        </p>
+        <p className="text-muted">
+          Current email matched allowlist:{" "}
+          <span className="text-foreground">
+            {debugInfo.matchedAllowlist ? "yes" : "no"}
+          </span>
+        </p>
+      </div>
       <p className="mb-6 max-w-md text-sm text-muted">
-        This area is restricted to moderators. Add your email to
-        <span className="mx-1 font-mono">NEXT_PUBLIC_ADMIN_EMAILS</span>
-        for UI access, and add your auth user to
-        <span className="mx-1 font-mono">public.admin_users</span>
-        for database-level admin permissions.
+        Admin access is configured through Vercel NEXT_PUBLIC_ADMIN_EMAILS and Supabase
+        public.admin_users.
       </p>
       <Badge variant="warning">Private beta moderation tools</Badge>
     </div>
