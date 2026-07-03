@@ -25,7 +25,9 @@ export function SaveListingButton({
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    runProtectedAction(() => toggleSaved(listingId));
+    runProtectedAction(() => {
+      void toggleSaved(listingId);
+    });
   };
 
   return (

@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
+import { usesSupabaseSavedListings } from "@/lib/saved-listings-mode";
 import { getProductMode, isDemoDataEnabled, isRealDataMode } from "@/lib/product-mode";
 import { isModerationRealtimeMode } from "@/lib/services/report-service";
 
@@ -75,6 +76,11 @@ const STATUS_ROWS: StatusRow[] = [
     detail: usesSupabaseMarketplace() ? "schema applied" : "SQL prepared",
   },
   { label: "Payments", status: "not-connected" },
+  {
+    label: "Supabase Saved Listings",
+    status: usesSupabaseSavedListings() ? "ready" : "not-connected",
+    detail: usesSupabaseSavedListings() ? "saved_listings table" : "localStorage",
+  },
   {
     label: "Real Chat",
     status: usesSupabaseMessaging() ? "ready" : "not-connected",

@@ -160,7 +160,8 @@ export const QA_CHECKLIST: QACheckSection[] = [
         id: "mp-save-onboarded",
         label: "Save listing (onboarded)",
         steps: ["While onboarded, click heart on a listing", "Visit /saved"],
-        expected: "Listing saved to localStorage. Appears on /saved.",
+        expected:
+          "Demo/local: listing saved in localStorage. Supabase real mode: row in public.saved_listings.",
         status: "manual",
       },
       {
@@ -256,7 +257,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
   {
     id: "saved-listings",
     title: "Saved Listings",
-    description: "Saved listings page and localStorage sync.",
+    description: "Saved listings page with Supabase persistence in real mode.",
     items: [
       {
         id: "saved-guard",
@@ -269,7 +270,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         id: "saved-page",
         label: "Saved page shows listings",
         steps: ["Save 2+ listings while onboarded", "Visit /saved"],
-        expected: "Saved listings displayed. Can unsave from page.",
+        expected: "Saved listings displayed. Unsave removes from page and Supabase/local store.",
         status: "manual",
       },
       {
