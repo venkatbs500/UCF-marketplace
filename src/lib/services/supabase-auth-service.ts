@@ -47,8 +47,16 @@ const PENDING_EMAIL_KEY = "knight-market-supabase-pending-email";
 
 let sessionCache: AuthSession = readInitialSession();
 const listeners = new Set<() => void>();
+const sessionReadyListeners = new Set<() => void>();
 let unsubscribeAuthListener: (() => void) | null = null;
 let bootstrapped = false;
+let sessionReady = false;
+
+function notifySessionReady() {
+  if (sessionReady) return;
+  sessionReady = true;
+  sessionReadyListeners.forEach((listener) => listener());
+}
 
 function notify() {
   listeners.forEach((listener) => listener());
@@ -151,7 +159,9 @@ export const supabaseAuthService: AuthService = {
     ensureAuthSubscription();
     if (!bootstrapped) {
       bootstrapped = true;
-      void refreshSessionFromSupabase();
+      void refreshSessionFromSupabase().finally(() => {
+        notifySessionReady();
+      });
     }
     return () => {
       listeners.delete(listener);
@@ -161,6 +171,15 @@ export const supabaseAuthService: AuthService = {
       }
     };
   },
+  subscribeSessionReady(listener: () => void) {
+    sessionReadyListeners.add(listener);
+    if (sessionReady) listener();
+    return () => {
+      sessionReadyListeners.delete(listener);
+    };
+  },
+  getSessionReadySnapshot: () => sessionReady,
+  getServerSessionReadySnapshot: () => false,
   async signInWithEmail(email: string): Promise<AuthResult> {
     const normalized = normalizeEmail(email);
     const emailError = getStudentEmailError(normalized);
@@ -205,6 +224,7 @@ export const supabaseAuthService: AuthService = {
   },
   async refreshSession(): Promise<void> {
     await refreshSessionFromSupabase();
+    notifySessionReady();
   },
 
   async completeOnboarding(user: AuthUser, data: OnboardingData): Promise<AuthResult> {

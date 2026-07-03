@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { User, MapPin, Sparkles, ArrowRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/providers/auth-provider";
+import {
+  AUTH_ROUTES,
+  consumeAuthRedirect,
+  rememberAuthRedirect,
+} from "@/lib/auth";
 import {
   YEAR_OPTIONS,
   CAMPUS_AREA_OPTIONS,
@@ -22,6 +27,7 @@ import { TRUST_DISCLAIMER } from "@/lib/constants";
 
 export function OnboardingForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { completeOnboarding } = useAuth();
   const [name, setName] = useState("");
   const [major, setMajor] = useState("");
@@ -30,6 +36,10 @@ export function OnboardingForm() {
   const [interests, setInterests] = useState<InterestOption[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    rememberAuthRedirect(searchParams.get("redirect"));
+  }, [searchParams]);
 
   const toggleInterest = (interest: InterestOption) => {
     setInterests((prev) =>
@@ -59,7 +69,7 @@ export function OnboardingForm() {
     setLoading(false);
 
     if (result.success) {
-      router.push("/marketplace");
+      router.push(consumeAuthRedirect(AUTH_ROUTES.marketplace));
     } else {
       setError(result.error ?? "Something went wrong. Please try again.");
     }

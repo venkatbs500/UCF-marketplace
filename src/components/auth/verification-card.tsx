@@ -11,6 +11,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/auth-provider";
+import { buildOnboardingUrl, peekAuthRedirect } from "@/lib/auth";
 import { TRUST_DISCLAIMER } from "@/lib/constants";
 
 export function VerificationCard() {
@@ -27,7 +28,7 @@ export function VerificationCard() {
     const result = await verifyCode(code);
     setLoading(false);
     if (result.success) {
-      router.push("/onboarding");
+      router.push(buildOnboardingUrl(peekAuthRedirect()));
     } else {
       setError(result.error ?? "Verification failed. Please try again.");
     }

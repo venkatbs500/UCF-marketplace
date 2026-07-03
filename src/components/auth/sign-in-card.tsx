@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/providers/auth-provider";
+import { rememberAuthRedirect } from "@/lib/auth";
 import { APP_NAME, TRUST_DISCLAIMER } from "@/lib/constants";
 
 const CALLBACK_ERROR_MESSAGE =
@@ -34,6 +35,10 @@ export function SignInCard() {
   }, [searchParams]);
 
   const displayError = error || queryError;
+
+  useEffect(() => {
+    rememberAuthRedirect(searchParams.get("redirect"));
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

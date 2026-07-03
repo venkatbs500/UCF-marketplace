@@ -55,10 +55,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getClientMounted,
     getServerMounted
   );
+  const isSessionReady = useSyncExternalStore(
+    activeAuthService.subscribeSessionReady,
+    activeAuthService.getSessionReadySnapshot,
+    activeAuthService.getServerSessionReadySnapshot
+  );
 
   const user = session.user;
   const pendingEmail = session.pendingEmail;
-  const isLoading = !isMounted;
+  const isLoading = !isMounted || !isSessionReady;
 
   const signInWithEmail = useCallback(
     (email: string) => activeAuthService.signInWithEmail(email),

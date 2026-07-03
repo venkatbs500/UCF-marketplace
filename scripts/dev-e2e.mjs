@@ -4,6 +4,7 @@ const env = {
   ...process.env,
   NEXT_PUBLIC_AUTH_MODE: "local",
   NEXT_PUBLIC_PRODUCT_MODE: "demo",
+  NEXT_PUBLIC_ADMIN_EMAILS: "admin@ucf.edu",
 };
 
 const E2E_PORT = "3100";

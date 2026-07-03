@@ -10,7 +10,52 @@ export const AUTH_ROUTES = {
   verify: "/verify",
   onboarding: "/onboarding",
   marketplace: "/marketplace",
+  admin: "/admin",
 } as const;
+
+export const AUTH_REDIRECT_STORAGE_KEY = "knight-market-auth-redirect";
+
+/** Only allow same-origin relative paths (blocks open redirects). */
+export function getSafeRedirectPath(path: string | null | undefined): string | null {
+  if (!path || typeof path !== "string") return null;
+  if (!path.startsWith("/") || path.startsWith("//")) return null;
+  return path;
+}
+
+export function rememberAuthRedirect(path: string | null | undefined): void {
+  const safe = getSafeRedirectPath(path);
+  if (!safe || typeof window === "undefined") return;
+  sessionStorage.setItem(AUTH_REDIRECT_STORAGE_KEY, safe);
+}
+
+export function peekAuthRedirect(): string | null {
+  if (typeof window === "undefined") return null;
+  return getSafeRedirectPath(sessionStorage.getItem(AUTH_REDIRECT_STORAGE_KEY));
+}
+
+export function consumeAuthRedirect(fallback: string = AUTH_ROUTES.marketplace): string {
+  const stored = peekAuthRedirect();
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem(AUTH_REDIRECT_STORAGE_KEY);
+  }
+  return stored ?? fallback;
+}
+
+export function buildSignInUrl(redirectPath?: string | null): string {
+  const safe = getSafeRedirectPath(redirectPath ?? null);
+  if (!safe) return AUTH_ROUTES.signIn;
+  return `${AUTH_ROUTES.signIn}?redirect=${encodeURIComponent(safe)}`;
+}
+
+export function buildOnboardingUrl(redirectPath?: string | null): string {
+  const safe = getSafeRedirectPath(redirectPath ?? null);
+  if (!safe) return AUTH_ROUTES.onboarding;
+  return `${AUTH_ROUTES.onboarding}?redirect=${encodeURIComponent(safe)}`;
+}
+
+export function getPostAuthDestination(): string {
+  return peekAuthRedirect() ?? AUTH_ROUTES.marketplace;
+}
 
 export type AuthFlowMode = "sign-in" | "verify" | "onboarding";
 
@@ -29,7 +74,7 @@ export function getAuthDestination({
   mode,
 }: AuthDestinationInput): string | null {
   if (isAuthenticated && hasCompletedOnboarding) {
-    return AUTH_ROUTES.marketplace;
+    return getPostAuthDestination();
   }
 
   if (mode === "sign-in") {

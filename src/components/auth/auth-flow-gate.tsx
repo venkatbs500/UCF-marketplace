@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/providers/auth-provider";
-import { getAuthDestination } from "@/lib/auth";
+import { consumeAuthRedirect, getAuthDestination } from "@/lib/auth";
 import { AuthPageShell } from "@/components/auth/auth-page-shell";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -30,7 +30,11 @@ export function AuthFlowGate({ mode, children }: AuthFlowGateProps) {
     });
 
     if (destination) {
-      router.replace(destination);
+      const target =
+        isAuthenticated && hasCompletedOnboarding
+          ? consumeAuthRedirect(destination)
+          : destination;
+      router.replace(target);
     }
   }, [
     isLoading,

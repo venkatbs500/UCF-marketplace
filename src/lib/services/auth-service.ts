@@ -9,6 +9,9 @@ export interface AuthService {
   getSessionSnapshot(): AuthSession;
   getServerSessionSnapshot(): AuthSession;
   subscribe(listener: () => void): () => void;
+  subscribeSessionReady(listener: () => void): () => void;
+  getSessionReadySnapshot(): boolean;
+  getServerSessionReadySnapshot(): boolean;
   isUcfEmail(email: string): boolean;
   signInWithEmail(email: string): Promise<AuthResult>;
   verifyCode(code: string, pendingEmail: string | null): Promise<AuthResult>;

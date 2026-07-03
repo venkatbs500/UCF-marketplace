@@ -21,6 +21,9 @@ export const localAuthService: AuthService = {
   getSessionSnapshot,
   getServerSessionSnapshot,
   subscribe: subscribeSession,
+  subscribeSessionReady: () => () => {},
+  getSessionReadySnapshot: () => true,
+  getServerSessionReadySnapshot: () => false,
   isUcfEmail: isAllowedStudentEmail,
   createUserFromEmail,
 

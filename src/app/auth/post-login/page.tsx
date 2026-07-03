@@ -9,6 +9,12 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { useAuth } from "@/components/providers/auth-provider";
+import {
+  AUTH_ROUTES,
+  buildOnboardingUrl,
+  consumeAuthRedirect,
+  peekAuthRedirect,
+} from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 export default function PostLoginPage() {
@@ -46,7 +52,12 @@ export default function PostLoginPage() {
 
   useEffect(() => {
     if (!synced || !isAuthenticated) return;
-    router.replace(hasCompletedOnboarding ? "/marketplace" : "/onboarding");
+    const redirect = peekAuthRedirect();
+    router.replace(
+      hasCompletedOnboarding
+        ? consumeAuthRedirect(AUTH_ROUTES.marketplace)
+        : buildOnboardingUrl(redirect)
+    );
   }, [synced, isAuthenticated, hasCompletedOnboarding, router]);
 
   const showError = synced && !isAuthenticated;
