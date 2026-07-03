@@ -99,6 +99,7 @@ Knight Market can be deployed for **private beta testing** — not public launch
 - Marketplace listings
 - Listing image upload
 - Buyer–seller messaging (listings)
+- Reporting + moderation reports dashboard (private beta)
 
 **Coming soon (honest empty states in real mode):**
 
@@ -110,10 +111,21 @@ The production schema (tables, RLS, storage buckets) lives in SQL migrations:
 
 - Migration: [supabase/sql/001_core_product_schema.sql](supabase/sql/001_core_product_schema.sql)
 - Messaging policy: [supabase/sql/002_messaging_policy_fix.sql](supabase/sql/002_messaging_policy_fix.sql)
+- Moderation patch: [supabase/sql/003_moderation_reports.sql](supabase/sql/003_moderation_reports.sql)
 - Setup guide: [docs/supabase-core-schema-setup.md](docs/supabase-core-schema-setup.md)
 - Rollback: [supabase/sql/001_core_product_schema_rollback.sql](supabase/sql/001_core_product_schema_rollback.sql)
 
 Apply in the Supabase SQL Editor before private beta testing.
+
+Moderation admin setup:
+
+1. Set `NEXT_PUBLIC_ADMIN_EMAILS=your-email@ucf.edu` in Vercel.
+2. Insert your auth user into `public.admin_users` (after applying `003_moderation_reports.sql`):
+   ```sql
+   INSERT INTO public.admin_users (user_id, email)
+   VALUES ('<your-auth-user-id>', 'your-email@ucf.edu')
+   ON CONFLICT (user_id) DO NOTHING;
+   ```
 
 ---
 

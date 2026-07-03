@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useAuth } from "@/components/providers/auth-provider";
+import { ReportDialog } from "@/components/safety/report-dialog";
 import {
   getConversation,
   getMyConversations,
@@ -325,6 +326,22 @@ export function RealMessagesInbox() {
                       : "Marketplace conversation"}
                   </p>
                 </div>
+                <div className="ml-auto flex items-center gap-2">
+                  <ReportDialog
+                    targetType="user"
+                    targetId={activeConversation.otherParticipant.id}
+                    buttonLabel="Report user"
+                    size="sm"
+                    variant="ghost"
+                  />
+                  <ReportDialog
+                    targetType="conversation"
+                    targetId={activeConversation.id}
+                    buttonLabel="Report chat"
+                    size="sm"
+                    variant="ghost"
+                  />
+                </div>
               </div>
 
               <div className="flex-1 space-y-3 overflow-y-auto p-4">
@@ -345,10 +362,21 @@ export function RealMessagesInbox() {
                       )}
                       data-testid={`message-${message.id}`}
                     >
-                      <p>{message.body}</p>
+                      <p>{message.isHidden ? "Message hidden by moderation" : message.body}</p>
                       <p className="mt-1 text-[10px] text-muted">
                         {formatRelativeTime(message.createdAt)}
                       </p>
+                      {!message.isOwnMessage && (
+                        <div className="mt-1 flex justify-end">
+                          <ReportDialog
+                            targetType="message"
+                            targetId={message.id}
+                            buttonLabel="Report"
+                            size="sm"
+                            variant="ghost"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

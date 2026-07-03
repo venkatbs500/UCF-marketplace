@@ -11,6 +11,7 @@ import { SellerTrustCard } from "@/components/sellers/seller-trust-card";
 import { SellerListingsSection } from "@/components/sellers/seller-listings-section";
 import { SellerReviewsSection } from "@/components/sellers/seller-reviews-section";
 import { ContactSellerPanel } from "@/components/marketplace/contact-seller-panel";
+import { ReportDialog } from "@/components/safety/report-dialog";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useUserListings } from "@/components/providers/user-listings-provider";
 import { getSellerById, getListingsBySeller } from "@/lib/marketplace-utils";
@@ -67,6 +68,16 @@ export default function SellerProfilePage() {
         </div>
         <div className="space-y-4">
           <SellerTrustCard seller={seller} />
+          {user?.id !== sellerId && (
+            <ReportDialog
+              targetType="user"
+              targetId={sellerId}
+              buttonLabel="Report user"
+              variant="ghost"
+              size="sm"
+              className="w-full"
+            />
+          )}
           <ContactSellerPanel listing={listings[0]} />
         </div>
       </div>

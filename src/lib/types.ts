@@ -48,7 +48,7 @@ export type MarketplaceCategory =
 
 export type ListingCondition = "new" | "like-new" | "good" | "fair" | "poor";
 
-export type ListingStatus = "active" | "sold" | "reserved" | "draft";
+export type ListingStatus = "active" | "sold" | "reserved" | "draft" | "removed";
 
 export type Listing = {
   id: string;

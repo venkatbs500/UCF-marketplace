@@ -1,5 +1,6 @@
 import type { AuthUser } from "./types";
 import type { OnboardingData } from "./onboarding-options";
+import { isAdminEmailForUi } from "./admin";
 
 export const SESSION_STORAGE_KEY = "knight-market-session";
 export const MOCK_VERIFICATION_CODE = "123456";
@@ -99,7 +100,7 @@ export function isUcfEmail(email: string): boolean {
 }
 
 export function isAdminEmail(email: string): boolean {
-  return email.toLowerCase().includes("admin");
+  return isAdminEmailForUi(email);
 }
 
 export function getInitialsFromEmail(email: string): string {

@@ -18,6 +18,7 @@ export type MessageRow = {
   body: string;
   created_at: string;
   read_at: string | null;
+  is_hidden?: boolean;
 };
 
 export type ConversationWithListingRow = ConversationRow & {
@@ -60,6 +61,7 @@ export type MessageThreadItem = {
   senderName: string;
   createdAt: string;
   isOwnMessage: boolean;
+  isHidden: boolean;
 };
 
 function participantName(profile: ProfileRow | null | undefined): string {
@@ -119,10 +121,11 @@ export function mapMessageRowToThreadItem(
 ): MessageThreadItem {
   return {
     id: row.id,
-    body: row.body,
+    body: row.is_hidden ? "Message hidden by moderation" : row.body,
     senderId: row.sender_id,
     senderName,
     createdAt: row.created_at,
     isOwnMessage: row.sender_id === currentUserId,
+    isHidden: Boolean(row.is_hidden),
   };
 }

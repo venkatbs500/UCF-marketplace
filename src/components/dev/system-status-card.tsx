@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
 import { getProductMode, isDemoDataEnabled, isRealDataMode } from "@/lib/product-mode";
+import { isModerationRealtimeMode } from "@/lib/services/report-service";
 
 type SystemStatus = "ready" | "not-connected";
 
@@ -78,6 +79,11 @@ const STATUS_ROWS: StatusRow[] = [
     label: "Real Chat",
     status: usesSupabaseMessaging() ? "ready" : "not-connected",
     detail: usesSupabaseMessaging() ? "Supabase messaging" : "coming soon / demo",
+  },
+  {
+    label: "Moderation Reports",
+    status: isModerationRealtimeMode() ? "ready" : "not-connected",
+    detail: isModerationRealtimeMode() ? "Supabase reports/admin" : "demo preview",
   },
   { label: "AI API", status: "not-connected" },
 ];

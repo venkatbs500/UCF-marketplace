@@ -2,6 +2,8 @@
 
 import type { Listing } from "@/lib/types";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/components/providers/auth-provider";
+import { ReportDialog } from "@/components/safety/report-dialog";
 import { MessageSellerButton } from "./message-seller-button";
 
 interface ContactSellerPanelProps {
@@ -9,6 +11,8 @@ interface ContactSellerPanelProps {
 }
 
 export function ContactSellerPanel({ listing }: ContactSellerPanelProps) {
+  const { user } = useAuth();
+
   if (!listing) {
     return (
       <Card>
@@ -36,6 +40,16 @@ export function ContactSellerPanel({ listing }: ContactSellerPanelProps) {
           className="w-full"
           size="default"
         />
+        {user?.id !== listing.sellerId && (
+          <ReportDialog
+            targetType="listing"
+            targetId={listing.id}
+            buttonLabel="Report listing"
+            variant="ghost"
+            size="sm"
+            className="mt-2 w-full"
+          />
+        )}
       </CardContent>
     </Card>
   );

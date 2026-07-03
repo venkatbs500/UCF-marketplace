@@ -45,6 +45,7 @@ Do **not** commit `.env.local` or service-role keys.
 4. Click **Run**
 5. Confirm no errors in the output panel
 6. **Messaging send:** run `supabase/sql/002_messaging_policy_fix.sql` (adds `conversations` UPDATE policy for `last_message_at`)
+7. **Moderation/admin:** run `supabase/sql/003_moderation_reports.sql` (reports upgrades + `admin_users` + moderation policies)
 
 ### Option B — Supabase CLI (when local CLI is configured)
 
@@ -52,6 +53,7 @@ Do **not** commit `.env.local` or service-role keys.
 # From repo root, after `supabase link`
 supabase db execute --file supabase/sql/001_core_product_schema.sql
 supabase db execute --file supabase/sql/002_messaging_policy_fix.sql
+supabase db execute --file supabase/sql/003_moderation_reports.sql
 ```
 
 ## How to verify tables
@@ -160,10 +162,11 @@ Example: `listing-images/a1b2c3d4-.../desk-photo.webp`
 | Marketplace listings | ✅ Supabase in real+supabase mode |
 | Listing images | ✅ `listing-images` bucket in real mode |
 | Messaging (listings) | ✅ Supabase in real+supabase mode (apply `002` SQL) |
+| Reports / moderation | ✅ Basic reports + admin moderation dashboard (apply `003` SQL) |
 | Saved listings | localStorage |
 | Housing, tutoring, jobs, events | Coming-soon UI |
 | Lost & found, discounts | Coming-soon UI |
-| Reviews / reports / admin | Mock or placeholder only |
+| Reviews | Mock or placeholder only |
 | E2E / CI | `NEXT_PUBLIC_AUTH_MODE=local` + `PRODUCT_MODE=demo` |
 
 Local/demo mode is unchanged and remains the E2E path.

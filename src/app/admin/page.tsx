@@ -3,12 +3,12 @@
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { useAuth } from "@/components/providers/auth-provider";
-import { isAdminEmail } from "@/lib/auth";
+import { isAdminEmailForUi } from "@/lib/admin";
 import { AdminDashboard, AdminLockedState } from "./admin-dashboard";
 
 function AdminContent() {
   const { user } = useAuth();
-  const isAdmin = user ? isAdminEmail(user.email) : false;
+  const isAdmin = user ? isAdminEmailForUi(user.email) : false;
 
   return (
     <AppShell>
