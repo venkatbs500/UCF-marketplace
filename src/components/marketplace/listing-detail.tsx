@@ -46,7 +46,7 @@ export function ListingDetail({ listing }: ListingDetailProps) {
           ) : (
             <>
               <SellerSummaryCard listing={listing} />
-              <ContactSellerPanel />
+              <ContactSellerPanel listing={listing} />
             </>
           )}
           <SafetyTipsCard />

@@ -1,6 +1,6 @@
 # Knight Market — Backend Migration Plan
 
-> **Status:** Supabase Auth is live. Core product schema SQL is prepared in `supabase/sql/`. Frontend integration is **pending**.
+> **Status:** Supabase Auth is live. Core product schema applied. Marketplace listings and buyer-seller messaging are wired in real mode. Other modules pending.
 
 ## Current architecture
 
@@ -24,7 +24,8 @@ Client state uses React Context + `useSyncExternalStore` with cached snapshots f
 **Service layer (migration seam):**
 
 - `src/lib/services/local-auth-service.ts` ↔ `supabase-auth-service.ts` (auth done)
-- `src/lib/services/local-marketplace-service.ts` → future `supabase-marketplace-service.ts`
+- `src/lib/services/local-marketplace-service.ts` ↔ `supabase-marketplace-service.ts` (marketplace done in real mode)
+- `src/lib/services/messaging-service.ts` ↔ `supabase-messaging-service.ts` (listing messaging done in real mode)
 - `src/lib/services/storage-service.ts` → safe JSON helpers (may remain for client cache)
 
 Providers import services, not raw localStorage.
@@ -111,8 +112,9 @@ Public read. Authenticated write to `{uid}/` folder paths. 5 MB limit; JPEG/PNG/
 7. **Jobs / events** — `campus_jobs`, `campus_events`
 8. **Lost & found** — `lost_found_items`
 9. **Discounts** — `student_discounts`
-10. **Messaging** — `conversations` + `messages` (Supabase Realtime)
-11. **Reviews / reports / admin** — Trust & moderation queue
+10. **Messaging** — `conversations` + `messages` ✅ (listing threads; apply `002_messaging_policy_fix.sql` for send)
+11. **Messaging realtime** — Supabase Realtime subscriptions (next sprint)
+12. **Reviews / reports / admin** — Trust & moderation queue
 
 ---
 
@@ -130,8 +132,9 @@ Public read. Authenticated write to `{uid}/` folder paths. 5 MB limit; JPEG/PNG/
 
 ## Next engineering steps
 
-1. Apply `001_core_product_schema.sql` in Supabase Dashboard (see setup guide)
-2. Add `supabase-marketplace-service.ts` implementing `MarketplaceService`
-3. Sync profiles on onboarding complete
-4. Feature flag: `NEXT_PUBLIC_DATA_SOURCE=local|supabase` (optional, alongside product mode)
-5. CI integration tests against local Supabase (`supabase start`) when CLI is adopted
+1. Apply `001_core_product_schema.sql` and `002_messaging_policy_fix.sql` in Supabase Dashboard
+2. ~~Add `supabase-marketplace-service.ts`~~ ✅
+3. ~~Wire listing messaging (`Message Seller` → `/messages`)~~ ✅
+4. Sync profiles on onboarding complete (if not fully done)
+5. Saved listings → `saved_listings` table
+6. CI integration tests against local Supabase (`supabase start`) when CLI is adopted

@@ -67,7 +67,7 @@ export default function SellerProfilePage() {
         </div>
         <div className="space-y-4">
           <SellerTrustCard seller={seller} />
-          <ContactSellerPanel />
+          <ContactSellerPanel listing={listings[0]} />
         </div>
       </div>
     </AppShell>

@@ -1,6 +1,6 @@
 # Supabase Core Schema Setup
 
-This guide covers the **production database foundation** for Knight Market. The SQL lives in the repo; the frontend is **not wired** to these tables yet.
+This guide covers the **production database foundation** for Knight Market. Marketplace listings and buyer-seller messaging are wired when `AUTH_MODE=supabase` and `PRODUCT_MODE=real`.
 
 ## What this schema adds
 
@@ -44,12 +44,14 @@ Do **not** commit `.env.local` or service-role keys.
 3. Paste the full contents of `supabase/sql/001_core_product_schema.sql`
 4. Click **Run**
 5. Confirm no errors in the output panel
+6. **Messaging send:** run `supabase/sql/002_messaging_policy_fix.sql` (adds `conversations` UPDATE policy for `last_message_at`)
 
 ### Option B — Supabase CLI (when local CLI is configured)
 
 ```bash
 # From repo root, after `supabase link`
 supabase db execute --file supabase/sql/001_core_product_schema.sql
+supabase db execute --file supabase/sql/002_messaging_policy_fix.sql
 ```
 
 ## How to verify tables
@@ -152,17 +154,15 @@ Example: `listing-images/a1b2c3d4-.../desk-photo.webp`
 
 ## What is NOT wired yet
 
-The app still uses **localStorage** for marketplace data in real mode. This sprint does **not** change frontend behavior.
-
 | Feature | Current state |
 |---|---|
-| Profiles / onboarding | Auth works; profile row not synced from app |
-| Marketplace listings | `local-marketplace-service.ts` |
+| Profiles / onboarding | Partial sync; verify `profiles` on onboarding |
+| Marketplace listings | ✅ Supabase in real+supabase mode |
+| Listing images | ✅ `listing-images` bucket in real mode |
+| Messaging (listings) | ✅ Supabase in real+supabase mode (apply `002` SQL) |
 | Saved listings | localStorage |
-| Listing images | Emoji placeholders; no upload |
 | Housing, tutoring, jobs, events | Coming-soon UI |
 | Lost & found, discounts | Coming-soon UI |
-| Messaging | Coming-soon UI |
 | Reviews / reports / admin | Mock or placeholder only |
 | E2E / CI | `NEXT_PUBLIC_AUTH_MODE=local` + `PRODUCT_MODE=demo` |
 

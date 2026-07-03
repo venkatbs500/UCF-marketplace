@@ -162,9 +162,9 @@ export const QA_CHECKLIST: QACheckSection[] = [
       {
         id: "mp-message-onboarded",
         label: "Message seller (onboarded)",
-        steps: ["While onboarded, click Message Seller"],
+        steps: ["While onboarded in demo mode, click Message Seller"],
         expected:
-          "Shows coming-soon message about messaging — not a fake \"Ready\" state.",
+          "Demo: coming-soon message. Supabase real mode: opens /messages conversation.",
         status: "manual",
       },
       {
@@ -768,6 +768,56 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Owner delete via Supabase",
         steps: ["Delete own listing from profile or detail"],
         expected: "Row removed from listings. UI updates on marketplace and profile.",
+        status: "manual",
+      },
+    ],
+  },
+  {
+    id: "supabase-messaging",
+    title: "Supabase Messaging (Real Mode)",
+    description:
+      "When NEXT_PUBLIC_AUTH_MODE=supabase and NEXT_PUBLIC_PRODUCT_MODE=real.",
+    items: [
+      {
+        id: "msg-create-conversation",
+        label: "Message Seller creates conversation",
+        steps: ["Sign in as buyer", "Open another student's listing", "Click Message Seller"],
+        expected: "Routes to /messages with conversation query. Row in public.conversations.",
+        status: "manual",
+      },
+      {
+        id: "msg-send",
+        label: "Send message inserts row",
+        steps: ["In /messages thread, type message and Send"],
+        expected: "Message appears in thread. Row in public.messages.",
+        status: "manual",
+      },
+      {
+        id: "msg-owner-block",
+        label: "Owner cannot message self",
+        steps: ["View your own listing"],
+        expected: "No Message Seller button. Owner panel shown instead.",
+        status: "manual",
+      },
+      {
+        id: "msg-signed-out",
+        label: "Signed-out messaging guard",
+        steps: ["While signed out, visit /messages"],
+        expected: "Redirect to /sign-in.",
+        status: "automated",
+      },
+      {
+        id: "msg-invalid-conversation",
+        label: "Invalid conversation handled",
+        steps: ["Visit /messages?conversation=not-a-real-id while signed in"],
+        expected: "Friendly not-found state in thread panel.",
+        status: "manual",
+      },
+      {
+        id: "msg-no-fake-real",
+        label: "No fake messages in real mode",
+        steps: ["Set real mode", "Visit /messages with no conversations"],
+        expected: "Empty inbox. No mock Jordan Kim threads.",
         status: "manual",
       },
     ],

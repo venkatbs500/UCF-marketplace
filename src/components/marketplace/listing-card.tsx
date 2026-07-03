@@ -6,14 +6,13 @@ import { formatPrice } from "@/lib/utils";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
-import { ComingSoonAction } from "@/components/ui/coming-soon-action";
-import { COMING_SOON_MESSAGES } from "@/lib/coming-soon-messages";
+import { MessageSellerButton } from "./message-seller-button";
 import { SaveListingButton } from "./save-listing-button";
 import { ListingOwnerActions } from "./listing-owner-actions";
 import { useAuth } from "@/components/providers/auth-provider";
 import { canUserDeleteListing } from "@/lib/marketplace-utils";
 import { isListingImageUrl } from "@/lib/marketplace-mode";
-import { MapPin, MessageCircle, Star } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 
 const conditionLabels: Record<string, string> = {
   new: "New",
@@ -127,15 +126,14 @@ export function ListingCard({
               </div>
             </div>
           </div>
-          <ComingSoonAction
+          <MessageSellerButton
+            listingId={listing.id}
+            sellerId={listing.sellerId}
+            listingTitle={listing.title}
             variant="secondary"
             size="sm"
             className="w-full"
-            comingSoonMessage={COMING_SOON_MESSAGES.messageSeller}
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            Message Seller
-          </ComingSoonAction>
+          />
         </CardFooter>
       )}
     </Card>

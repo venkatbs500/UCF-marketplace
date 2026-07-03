@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Suspense, useState } from "react";
 import { MessageCircle, Shield } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthGuard } from "@/components/auth/auth-guard";
@@ -11,10 +12,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { RealMessagesInbox } from "@/components/messages/real-messages-inbox";
 import { messagePreviews } from "@/lib/mock-data";
 import { formatRelativeTime, cn } from "@/lib/utils";
 import { isDemoDataEnabled } from "@/lib/product-mode";
-import { useState } from "react";
+import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 
 function DemoMessagesContent() {
   const [activeId, setActiveId] = useState(messagePreviews[0]?.id);
@@ -42,6 +45,7 @@ function DemoMessagesContent() {
           {messagePreviews.map((msg) => (
             <button
               key={msg.id}
+              type="button"
               onClick={() => setActiveId(msg.id)}
               className={cn(
                 "flex w-full items-start gap-3 rounded-2xl p-4 text-left transition-colors",
@@ -99,8 +103,7 @@ function DemoMessagesContent() {
                 <MessageCircle className="mb-4 h-12 w-12 text-gold/30" />
                 <p className="mb-2 font-medium">Chat Preview</p>
                 <p className="max-w-sm text-sm text-muted">
-                  Real-time messaging will be connected in a future update. This
-                  is a visual foundation for the inbox experience.
+                  Demo inbox preview. Real messaging is enabled in Supabase real mode.
                 </p>
                 <Card className="mt-6 max-w-md text-left">
                   <p className="mb-2 text-xs text-muted">
@@ -117,6 +120,7 @@ function DemoMessagesContent() {
                     disabled
                   />
                   <button
+                    type="button"
                     className="rounded-2xl gold-gradient px-4 py-2 text-sm font-medium text-black opacity-50"
                     disabled
                   >
@@ -136,25 +140,23 @@ function DemoMessagesContent() {
   );
 }
 
-function RealMessagesContent() {
+function MessagesContent() {
+  if (usesSupabaseMessaging()) {
+    return <RealMessagesInbox />;
+  }
+  if (isDemoDataEnabled()) {
+    return <DemoMessagesContent />;
+  }
   return (
     <AppShell>
       <SectionHeading
         title="Messages"
-        subtitle="Chat with sellers, tutors, and roommates"
+        subtitle="Chat with verified UCF students"
       />
-
-      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-gold/20 bg-gold/5 p-4">
-        <Shield className="h-5 w-5 shrink-0 text-gold" />
-        <p className="text-sm text-muted">
-          Messages are limited to verified students to reduce spam.
-        </p>
-      </div>
-
       <EmptyState
         icon={MessageCircle}
         title="No messages yet"
-        description="When you contact a seller, roommate, or tutor, your conversations will appear here."
+        description="When you contact a seller, your conversations will appear here."
         action={
           <Link href="/marketplace">
             <Button>Browse marketplace</Button>
@@ -165,15 +167,18 @@ function RealMessagesContent() {
   );
 }
 
-function MessagesContent() {
-  const demoEnabled = isDemoDataEnabled();
-  return demoEnabled ? <DemoMessagesContent /> : <RealMessagesContent />;
-}
-
 export default function MessagesPage() {
   return (
     <AuthGuard>
-      <MessagesContent />
+      <Suspense
+        fallback={
+          <AppShell>
+            <LoadingSpinner className="min-h-[40vh]" label="Loading messages..." />
+          </AppShell>
+        }
+      >
+        <MessagesContent />
+      </Suspense>
     </AuthGuard>
   );
 }

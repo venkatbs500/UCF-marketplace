@@ -119,7 +119,7 @@ Developers can still append `?demo=1` in local development to preview mock catal
 - Supabase **core schema is prepared** — see [docs/supabase-core-schema-setup.md](docs/supabase-core-schema-setup.md)
 - **Marketplace listings** use Supabase when `NEXT_PUBLIC_AUTH_MODE=supabase` and `NEXT_PUBLIC_PRODUCT_MODE=real`
 - **Saved listings** still use localStorage (Supabase `saved_listings` table ready but not wired)
-- **Messaging** shows honest coming-soon copy
+- **Messaging** uses Supabase when `NEXT_PUBLIC_AUTH_MODE=supabase` and `NEXT_PUBLIC_PRODUCT_MODE=real`
 - Housing, jobs, events, tutoring, discounts, AI, and lost & found show **coming soon** empty states
 - Home page shows **honest module statuses** — no fake campus counts or preview people
 - **E2E/CI** still uses `local` auth + `demo` product mode
@@ -141,6 +141,22 @@ Developers can still append `?demo=1` in local development to preview mock catal
 7. Verify `/marketplace`, listing detail, and `/profile` show the listing
 8. Delete the listing and confirm it disappears
 
+### Manual Supabase messaging test
+
+Requires core schema applied plus [supabase/sql/002_messaging_policy_fix.sql](supabase/sql/002_messaging_policy_fix.sql) (allows participants to update `last_message_at` when sending).
+
+> **Note:** You cannot message your own listing. Use two verified UCF accounts, or temporarily create a second auth user.
+
+1. Account A: sign in, complete onboarding, post a marketplace listing
+2. Account B: sign in with a different UCF email, complete onboarding
+3. Account B: open Account A's listing and click **Message Seller**
+4. Confirm `/messages?conversation=<id>` opens with the thread
+5. Account B sends a message
+6. **Table Editor → conversations** — row with both participant IDs and `listing_id`
+7. **Table Editor → messages** — row with `body`, `sender_id`, `conversation_id`
+8. Account A signs in, visits `/messages`, sees the conversation
+9. Account A replies; both users see the thread after refresh (no realtime yet)
+
 ---
 
 ## Service Layer
@@ -150,7 +166,8 @@ Providers use abstractions in `src/lib/services/` so localStorage can be swapped
 | Module | Interface | Current implementation |
 |---|---|---|
 | Auth | `auth-service.ts` | `local-auth-service.ts` |
-| Marketplace | `marketplace-service.ts` | `local-marketplace-service.ts` |
+| Marketplace | `marketplace-service.ts` | `local-marketplace-service.ts` / `supabase-marketplace-service.ts` |
+| Messaging | `messaging-service.ts` | `supabase-messaging-service.ts` (real) / demo mock inbox |
 | Storage helpers | `storage-service.ts` | Safe JSON + SSR fallbacks |
 
 See [docs/backend-migration-plan.md](docs/backend-migration-plan.md) for the database schema, RLS summary, and frontend integration order.
@@ -182,8 +199,8 @@ Dev-only error demo: `/dev/error-demo`
 
 ## Known Limitations
 
-- Supabase marketplace is live in real+supabase mode; saved listings remain localStorage
-- Real product mode hides mock catalog data; messaging and housing tools show coming-soon states
+- Supabase marketplace and messaging are live in real+supabase mode; saved listings remain localStorage
+- Real product mode hides mock catalog data; housing and other modules show coming-soon states
 - No payments or AI API yet
 - E2E uses local/demo mode; production real mode requires Supabase schema applied manually
 - CI badge URL needs your GitHub repo path

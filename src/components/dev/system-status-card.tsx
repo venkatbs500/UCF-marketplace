@@ -1,7 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getProductMode, isDemoDataEnabled, isRealDataMode } from "@/lib/product-mode";
+import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
+import { getProductMode, isDemoDataEnabled, isRealDataMode } from "@/lib/product-mode";
 
 type SystemStatus = "ready" | "not-connected";
 
@@ -73,7 +74,11 @@ const STATUS_ROWS: StatusRow[] = [
     detail: usesSupabaseMarketplace() ? "schema applied" : "SQL prepared",
   },
   { label: "Payments", status: "not-connected" },
-  { label: "Real Chat", status: "not-connected" },
+  {
+    label: "Real Chat",
+    status: usesSupabaseMessaging() ? "ready" : "not-connected",
+    detail: usesSupabaseMessaging() ? "Supabase messaging" : "coming soon / demo",
+  },
   { label: "AI API", status: "not-connected" },
 ];
 
