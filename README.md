@@ -80,19 +80,40 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_AUTH_MODE=supabase
 NEXT_PUBLIC_PRODUCT_MODE=real
+NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
 ```
 
-Full setup guide: [docs/supabase-auth-setup.md](docs/supabase-auth-setup.md)
+Copy from [`.env.local.example`](.env.local.example). Full setup guide: [docs/supabase-auth-setup.md](docs/supabase-auth-setup.md)
+
+---
+
+## Private beta deployment (Vercel)
+
+Knight Market can be deployed for **private beta testing** — not public launch. Use this to validate real auth, listings, and messaging with a founder + friend on a deployed HTTPS URL.
+
+**Guide:** [docs/private-beta-deployment.md](docs/private-beta-deployment.md)
+
+**Real modules today:**
+
+- Auth (UCF email magic link)
+- Marketplace listings
+- Listing image upload
+- Buyer–seller messaging (listings)
+
+**Coming soon (honest empty states in real mode):**
+
+- Housing, Tutoring, Jobs, Events, Lost & Found, Discounts
 
 ### Supabase Database Schema
 
-The full production schema (tables, RLS, storage buckets) is prepared in SQL but **not wired to the frontend yet**:
+The production schema (tables, RLS, storage buckets) lives in SQL migrations:
 
 - Migration: [supabase/sql/001_core_product_schema.sql](supabase/sql/001_core_product_schema.sql)
+- Messaging policy: [supabase/sql/002_messaging_policy_fix.sql](supabase/sql/002_messaging_policy_fix.sql)
 - Setup guide: [docs/supabase-core-schema-setup.md](docs/supabase-core-schema-setup.md)
 - Rollback: [supabase/sql/001_core_product_schema_rollback.sql](supabase/sql/001_core_product_schema_rollback.sql)
 
-Apply the SQL in the Supabase SQL Editor when ready. The app continues using localStorage for marketplace data until a future sprint connects `supabase-marketplace-service.ts`.
+Apply in the Supabase SQL Editor before private beta testing.
 
 ---
 
@@ -132,6 +153,7 @@ Developers can still append `?demo=1` in local development to preview mock catal
    NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
    NEXT_PUBLIC_AUTH_MODE=supabase
    NEXT_PUBLIC_PRODUCT_MODE=real
+   NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
    ```
 2. Restart: `npm run dev`
 3. Sign in with a UCF email and complete onboarding

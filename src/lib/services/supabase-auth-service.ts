@@ -13,6 +13,7 @@ import {
   fetchSupabaseProfile,
   upsertSupabaseProfile,
 } from "@/lib/services/supabase-marketplace-service";
+import { getAuthCallbackUrl } from "@/lib/app-url";
 import {
   getSupabaseConfigIssues,
   hasSupabaseEnv,
@@ -177,7 +178,7 @@ export const supabaseAuthService: AuthService = {
       return { success: false, error: SUPABASE_SETUP_ERROR };
     }
 
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    const redirectTo = getAuthCallbackUrl();
 
     try {
       const { error } = await client.auth.signInWithOtp({

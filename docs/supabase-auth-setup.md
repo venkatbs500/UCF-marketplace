@@ -10,7 +10,11 @@ Add to `.env.local`:
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_AUTH_MODE=supabase
+NEXT_PUBLIC_PRODUCT_MODE=real
+NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
 ```
+
+- `NEXT_PUBLIC_APP_URL`: Public app origin (no trailing slash). On Vercel, set to your deployed URL.
 
 - `NEXT_PUBLIC_SUPABASE_URL`: Supabase Project URL from your Supabase dashboard.
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase publishable anon key from your Supabase dashboard.
@@ -20,8 +24,14 @@ NEXT_PUBLIC_AUTH_MODE=supabase
 
 In Supabase Auth URL configuration:
 
-- **Site URL**: `http://localhost:3000`
-- **Redirect URL**: `http://localhost:3000/auth/callback`
+**Local development**
+
+- **Site URL**: `http://localhost:3000` (or `http://127.0.0.1:3000`)
+- **Redirect URLs**:
+  - `http://localhost:3000/auth/callback`
+  - `http://127.0.0.1:3000/auth/callback`
+
+**Vercel private beta** — see [private-beta-deployment.md](./private-beta-deployment.md) for full steps.
 
 Enable an email provider in Supabase Auth settings. The default magic-link template is sufficient; no template customization is required.
 
@@ -41,5 +51,8 @@ Enable an email provider in Supabase Auth settings. The default magic-link templ
 
 After deploying to Vercel, add your production app URL to Supabase Auth:
 
-- Site URL: your production domain
-- Redirect URL: `https://<your-domain>/auth/callback`
+- Site URL: `https://<your-vercel-domain>.vercel.app`
+- Redirect URL: `https://<your-vercel-domain>.vercel.app/auth/callback`
+- Set `NEXT_PUBLIC_APP_URL` to the same origin in Vercel env vars
+
+Full private beta guide: [private-beta-deployment.md](./private-beta-deployment.md)

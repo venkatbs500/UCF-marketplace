@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { SystemStatusCard } from "@/components/dev/system-status-card";
 import { QA_CHECKLIST, QA_SUMMARY } from "@/lib/qa-checklist";
-import { ClipboardCheck, Info } from "lucide-react";
+import { isDevelopmentEnvironment } from "@/lib/app-url";
+import { ClipboardCheck, Info, Shield } from "lucide-react";
 
 const STATUS_LABELS = {
   manual: "Manual",
@@ -13,12 +14,29 @@ const STATUS_LABELS = {
 } as const;
 
 export default function QAPage() {
+  const isDev = isDevelopmentEnvironment();
+
   return (
     <AppShell>
       <SectionHeading
         title="Developer QA Checklist"
-        subtitle="Manual testing guide for Knight Market during frontend development"
+        subtitle={
+          isDev
+            ? "Manual testing guide for Knight Market during frontend development"
+            : "Internal QA checklist for the private beta — no secrets are shown"
+        }
       />
+
+      {!isDev && (
+        <div className="mb-6 flex items-start gap-3 rounded-2xl border border-gold/20 bg-gold/5 p-4">
+          <Shield className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
+          <p className="text-sm text-muted">
+            This page is for founders and testers running through the private beta
+            checklist. Demo emails and codes below are for local/E2E mode only — not
+            production credentials.
+          </p>
+        </div>
+      )}
 
       <div className="mb-8 grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">

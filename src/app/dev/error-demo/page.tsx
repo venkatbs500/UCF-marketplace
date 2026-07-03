@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/app-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { isDevelopmentEnvironment } from "@/lib/app-url";
 import { TRUST_DISCLAIMER } from "@/lib/constants";
 
 function ThrowOnRender({ shouldThrow }: { shouldThrow: boolean }) {
@@ -15,7 +16,7 @@ function ThrowOnRender({ shouldThrow }: { shouldThrow: boolean }) {
 }
 
 export default function ErrorDemoPage() {
-  const isDev = process.env.NODE_ENV === "development";
+  const isDev = isDevelopmentEnvironment();
   const [shouldThrow, setShouldThrow] = useState(false);
 
   if (!isDev) {
@@ -23,9 +24,10 @@ export default function ErrorDemoPage() {
       <AppShell>
         <Card className="max-w-lg mx-auto">
           <CardContent className="py-10 text-center">
-            <h1 className="mb-2 text-xl font-bold">Development only</h1>
+            <h1 className="mb-2 text-xl font-bold">Private beta only</h1>
             <p className="mb-6 text-sm text-muted">
-              This page is for local error boundary testing and is not available in production.
+              This page is for local error boundary testing and is not available on the
+              deployed private beta.
             </p>
             <Link href="/">
               <Button>Go Home</Button>

@@ -9,6 +9,7 @@ import { TRUST_DISCLAIMER } from "@/lib/constants";
 import { useAuth } from "@/components/providers/auth-provider";
 import { getEmailDomain } from "@/lib/auth-domain";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { getAuthCallbackUrl, isDevelopmentEnvironment } from "@/lib/app-url";
 import {
   AUTH_MODE,
   SUPABASE_ANON_KEY,
@@ -34,7 +35,7 @@ function formatKeyType(type: ReturnType<typeof getSupabaseKeyType>): string {
 }
 
 export default function AuthDiagnosticsPage() {
-  const isDev = process.env.NODE_ENV === "development";
+  const isDev = isDevelopmentEnvironment();
   const { refreshSession, isAuthenticated } = useAuth();
   const [reachability, setReachability] = useState<SupabaseReachabilityResult | null>(
     null
@@ -44,10 +45,7 @@ export default function AuthDiagnosticsPage() {
   const [supabaseSessionExists, setSupabaseSessionExists] = useState(false);
   const [sessionEmailDomain, setSessionEmailDomain] = useState<string | null>(null);
 
-  const callbackUrl = useMemo(() => {
-    if (typeof window === "undefined") return "/auth/callback";
-    return `${window.location.origin}/auth/callback`;
-  }, []);
+  const callbackUrl = useMemo(() => getAuthCallbackUrl(), []);
 
   const configIssues = getSupabaseConfigIssues();
 
@@ -91,9 +89,10 @@ export default function AuthDiagnosticsPage() {
       <AppShell>
         <Card className="mx-auto max-w-lg">
           <CardContent className="py-10 text-center">
-            <h1 className="mb-2 text-xl font-bold">Development only</h1>
+            <h1 className="mb-2 text-xl font-bold">Private beta only</h1>
             <p className="mb-6 text-sm text-muted">
-              Auth diagnostics are available in local development only.
+              Auth diagnostics are available in local development only. They are not
+              exposed on the deployed private beta.
             </p>
             <Link href="/">
               <Button>Go Home</Button>
