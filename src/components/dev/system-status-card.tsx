@@ -84,7 +84,16 @@ const STATUS_ROWS: StatusRow[] = [
   {
     label: "Real Chat",
     status: usesSupabaseMessaging() ? "ready" : "not-connected",
-    detail: usesSupabaseMessaging() ? "Supabase messaging" : "coming soon / demo",
+    detail: usesSupabaseMessaging()
+      ? "Supabase realtime messaging"
+      : "coming soon / demo",
+  },
+  {
+    label: "Unread Message Indicators",
+    status: usesSupabaseMessaging() ? "ready" : "not-connected",
+    detail: usesSupabaseMessaging()
+      ? "Supabase read state + badges"
+      : "demo preview badges",
   },
   {
     label: "Moderation Reports",

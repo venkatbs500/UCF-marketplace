@@ -2,23 +2,40 @@ import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 import type {
   ConversationPreview,
   MessageThreadItem,
+  UnreadSummary,
 } from "./supabase-messaging-types";
 import {
   getConversation,
+  getConversationUnreadCount,
   getMyConversations,
   getOrCreateListingConversation,
+  getUnreadConversationCount,
+  getUnreadConversationIds,
+  getUnreadSummary,
+  markConversationRead,
   sendMessage,
+  subscribeToConversations,
+  subscribeToMessages,
 } from "./supabase-messaging-service";
 
-export type { ConversationPreview, MessageThreadItem };
+export type { ConversationPreview, MessageThreadItem, UnreadSummary };
 
-export { usesSupabaseMessaging };
+export {
+  usesSupabaseMessaging,
+  subscribeToConversations,
+  subscribeToMessages,
+};
 
 export const supabaseMessagingService = {
   getMyConversations,
   getConversation,
   getOrCreateListingConversation,
   sendMessage,
+  getUnreadConversationCount,
+  getConversationUnreadCount,
+  markConversationRead,
+  getUnreadConversationIds,
+  getUnreadSummary,
 };
 
 export type MessagingService = typeof supabaseMessagingService;

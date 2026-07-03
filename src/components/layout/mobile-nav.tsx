@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useUnreadMessages } from "@/components/providers/unread-messages-provider";
+import { UnreadBadge } from "@/components/ui/unread-badge";
 import { AUTH_ROUTES } from "@/lib/auth";
 
 const mobileNavItems = [
@@ -43,6 +45,7 @@ const moreItems = [
 export function MobileNav() {
   const pathname = usePathname();
   const { isLoading, isAuthenticated } = useAuth();
+  const { unreadCount } = useUnreadMessages();
 
   return (
     <nav
@@ -69,13 +72,23 @@ export function MobileNav() {
             <Link
               key={item.href}
               href={href}
-              aria-label={`${item.label} tab`}
+              aria-label={
+                item.href === "/messages" && unreadCount > 0
+                  ? `${item.label} tab, ${unreadCount} unread`
+                  : `${item.label} tab`
+              }
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-medium transition-colors",
+                "relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 text-[10px] font-medium transition-colors",
                 active ? "text-gold" : "text-muted"
               )}
             >
               <Icon className={cn("h-5 w-5", active && "text-gold")} />
+              {item.href === "/messages" && (
+                <UnreadBadge
+                  count={unreadCount}
+                  className="absolute right-1 top-0"
+                />
+              )}
               {label}
             </Link>
           );

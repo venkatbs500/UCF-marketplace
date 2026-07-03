@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MessageCircle, RefreshCw, Shield } from "lucide-react";
@@ -16,13 +16,18 @@ import { ReportDialog } from "@/components/safety/report-dialog";
 import {
   getConversation,
   getMyConversations,
+  markConversationRead,
   sendMessage,
+  subscribeToConversations,
+  subscribeToMessages,
 } from "@/lib/services/supabase-messaging-service";
 import type {
   ConversationPreview,
   MessageThreadItem,
 } from "@/lib/services/supabase-messaging-types";
 import { formatRelativeTime, cn } from "@/lib/utils";
+import { UnreadBadge } from "@/components/ui/unread-badge";
+import { useUnreadMessages } from "@/components/providers/unread-messages-provider";
 
 type ThreadData = {
   conversationId: string;
@@ -45,7 +50,41 @@ export function RealMessagesInbox() {
   const [sendError, setSendError] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
+  const [realtimeError, setRealtimeError] = useState(false);
   const threadEndRef = useRef<HTMLDivElement>(null);
+  const { refreshUnread } = useUnreadMessages();
+
+  const reloadConversations = useCallback(async () => {
+    if (!userId) return;
+    const result = await getMyConversations(userId);
+    setConversations(result.conversations);
+    setListError(result.error ?? null);
+    await refreshUnread();
+  }, [userId, refreshUnread]);
+
+  const reloadThread = useCallback(
+    async (conversationId: string, markRead = false) => {
+      if (!userId) return;
+      if (markRead) {
+        await markConversationRead(userId, conversationId);
+      }
+      const result = await getConversation(conversationId, userId);
+      if (!result.conversation) {
+        setThreadData(null);
+        setThreadError(result.error ?? "Conversation not found.");
+        return;
+      }
+      setThreadData({
+        conversationId,
+        conversation: result.conversation,
+        messages: result.messages,
+      });
+      setThreadError(null);
+      await reloadConversations();
+    },
+    [userId, reloadConversations]
+  );
 
   useEffect(() => {
     if (!userId) return;
@@ -59,35 +98,42 @@ export function RealMessagesInbox() {
       setListLoading(false);
     });
 
+    const unsubscribe = subscribeToConversations(userId, () => {
+      if (cancelled) return;
+      setRealtimeConnected(true);
+      setRealtimeError(false);
+      void reloadConversations();
+    });
+
     return () => {
       cancelled = true;
+      unsubscribe();
+      setRealtimeConnected(false);
     };
-  }, [userId]);
+  }, [userId, reloadConversations]);
 
   useEffect(() => {
     if (!selectedId || !userId) return;
 
     let cancelled = false;
 
-    void getConversation(selectedId, userId).then((result) => {
+    void Promise.resolve().then(() => {
       if (cancelled) return;
-      if (!result.conversation) {
-        setThreadData(null);
-        setThreadError(result.error ?? "Conversation not found.");
-        return;
-      }
-      setThreadData({
-        conversationId: selectedId,
-        conversation: result.conversation,
-        messages: result.messages,
-      });
-      setThreadError(null);
+      return reloadThread(selectedId, true);
+    });
+
+    const unsubscribe = subscribeToMessages(selectedId, () => {
+      if (cancelled) return;
+      setRealtimeConnected(true);
+      setRealtimeError(false);
+      void reloadThread(selectedId, true);
     });
 
     return () => {
       cancelled = true;
+      unsubscribe();
     };
-  }, [selectedId, userId]);
+  }, [selectedId, userId, reloadThread]);
 
   useEffect(() => {
     threadEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -104,29 +150,6 @@ export function RealMessagesInbox() {
     threadData?.conversationId === selectedId ? threadData.messages : [];
 
   const showThreadOnMobile = Boolean(selectedId);
-
-  const reloadConversations = async () => {
-    if (!userId) return;
-    const result = await getMyConversations(userId);
-    setConversations(result.conversations);
-    setListError(result.error ?? null);
-  };
-
-  const reloadThread = async (conversationId: string) => {
-    if (!userId) return;
-    const result = await getConversation(conversationId, userId);
-    if (!result.conversation) {
-      setThreadData(null);
-      setThreadError(result.error ?? "Conversation not found.");
-      return;
-    }
-    setThreadData({
-      conversationId,
-      conversation: result.conversation,
-      messages: result.messages,
-    });
-    setThreadError(null);
-  };
 
   const handleSelectConversation = (id: string) => {
     router.replace(`/messages?conversation=${id}`, { scroll: false });
@@ -147,19 +170,33 @@ export function RealMessagesInbox() {
       return;
     }
 
+    const sentMessage = result.message;
     setDraft("");
     setThreadData((current) =>
       current?.conversationId === selectedId
-        ? { ...current, messages: [...current.messages, result.message!] }
+        ? {
+            ...current,
+            messages: [...current.messages, sentMessage],
+            conversation: {
+              ...current.conversation,
+              lastMessage: sentMessage.body,
+              lastMessageAt: sentMessage.createdAt,
+              unread: false,
+              unreadCount: 0,
+            },
+          }
         : current
     );
     await reloadConversations();
+    if (selectedId) {
+      await markConversationRead(userId, selectedId);
+    }
   };
 
   const handleRefresh = async () => {
     await reloadConversations();
     if (selectedId) {
-      await reloadThread(selectedId);
+      await reloadThread(selectedId, true);
     }
   };
 
@@ -236,6 +273,18 @@ export function RealMessagesInbox() {
         </p>
       )}
 
+      {realtimeError && (
+        <p role="status" className="mb-4 text-sm text-muted">
+          Live updates are unavailable. Use Refresh to check for new messages.
+        </p>
+      )}
+
+      {!realtimeError && realtimeConnected && (
+        <p className="sr-only" role="status">
+          Live messaging connected
+        </p>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-3 lg:gap-0 lg:overflow-hidden lg:rounded-2xl lg:glass-card lg:h-[calc(100vh-280px)]">
         <div
           className={cn(
@@ -264,19 +313,36 @@ export function RealMessagesInbox() {
               />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium">
+                  <span
+                    className={cn(
+                      "text-sm",
+                      conversation.unreadCount > 0 ? "font-semibold" : "font-medium"
+                    )}
+                  >
                     {conversation.otherParticipant.name}
                   </span>
-                  <span className="shrink-0 text-xs text-muted">
-                    {formatRelativeTime(conversation.lastMessageAt)}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {conversation.unreadCount > 0 && (
+                      <UnreadBadge count={conversation.unreadCount} />
+                    )}
+                    <span className="text-xs text-muted">
+                      {formatRelativeTime(conversation.lastMessageAt)}
+                    </span>
+                  </div>
                 </div>
                 {conversation.listingTitle && (
                   <Badge variant="outline" className="my-1 text-[10px]">
                     {conversation.listingTitle}
                   </Badge>
                 )}
-                <p className="truncate text-sm text-muted">{conversation.lastMessage}</p>
+                <p
+                  className={cn(
+                    "truncate text-sm",
+                    conversation.unreadCount > 0 ? "font-medium text-foreground" : "text-muted"
+                  )}
+                >
+                  {conversation.lastMessage}
+                </p>
               </div>
             </button>
           ))}

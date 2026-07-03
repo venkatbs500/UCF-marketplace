@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { MessageCircle, Shield } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthGuard } from "@/components/auth/auth-guard";
@@ -14,6 +14,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { RealMessagesInbox } from "@/components/messages/real-messages-inbox";
+import { useUnreadMessages } from "@/components/providers/unread-messages-provider";
+import { UnreadBadge } from "@/components/ui/unread-badge";
 import { messagePreviews } from "@/lib/mock-data";
 import { formatRelativeTime, cn } from "@/lib/utils";
 import { isDemoDataEnabled } from "@/lib/product-mode";
@@ -21,7 +23,21 @@ import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 
 function DemoMessagesContent() {
   const [activeId, setActiveId] = useState(messagePreviews[0]?.id);
+  const { markDemoConversationRead, isDemoConversationUnread } = useUnreadMessages();
   const active = messagePreviews.find((m) => m.id === activeId);
+
+  const handleSelect = (id: string) => {
+    setActiveId(id);
+    if (messagePreviews.find((preview) => preview.id === id)?.unread) {
+      markDemoConversationRead(id);
+    }
+  };
+
+  useEffect(() => {
+    if (activeId && messagePreviews.find((preview) => preview.id === activeId)?.unread) {
+      markDemoConversationRead(activeId);
+    }
+  }, [activeId, markDemoConversationRead]);
 
   return (
     <AppShell>
@@ -46,7 +62,7 @@ function DemoMessagesContent() {
             <button
               key={msg.id}
               type="button"
-              onClick={() => setActiveId(msg.id)}
+              onClick={() => handleSelect(msg.id)}
               className={cn(
                 "flex w-full items-start gap-3 rounded-2xl p-4 text-left transition-colors",
                 activeId === msg.id
@@ -62,9 +78,12 @@ function DemoMessagesContent() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-medium text-sm">{msg.participant.name}</span>
-                  <span className="shrink-0 text-xs text-muted">
-                    {formatRelativeTime(msg.timestamp)}
-                  </span>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {isDemoConversationUnread(msg.id) && <UnreadBadge count={1} />}
+                    <span className="text-xs text-muted">
+                      {formatRelativeTime(msg.timestamp)}
+                    </span>
+                  </div>
                 </div>
                 <Badge variant="outline" className="my-1 text-[10px]">
                   {msg.context}
@@ -78,7 +97,7 @@ function DemoMessagesContent() {
                   {msg.lastMessage}
                 </p>
               </div>
-              {msg.unread && (
+              {isDemoConversationUnread(msg.id) && (
                 <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-gold" />
               )}
             </button>

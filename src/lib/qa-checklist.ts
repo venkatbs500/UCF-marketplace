@@ -798,6 +798,28 @@ export const QA_CHECKLIST: QACheckSection[] = [
         status: "manual",
       },
       {
+        id: "msg-realtime",
+        label: "Realtime message delivery",
+        steps: [
+          "Open /messages in two browsers as buyer and seller",
+          "Send a message from one account",
+        ],
+        expected:
+          "Other account sees the message without pressing Refresh. Conversation list updates.",
+        status: "manual",
+      },
+      {
+        id: "msg-unread-badge",
+        label: "Unread nav badge",
+        steps: [
+          "As seller, receive a new buyer message",
+          "Check top nav and mobile nav messages icon",
+        ],
+        expected:
+          "Unread badge appears. Opening the conversation clears the badge and updates buyer_last_read_at or seller_last_read_at.",
+        status: "manual",
+      },
+      {
         id: "msg-owner-block",
         label: "Owner cannot message self",
         steps: ["View your own listing"],

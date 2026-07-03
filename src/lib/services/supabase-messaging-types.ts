@@ -8,6 +8,8 @@ export type ConversationRow = {
   created_by: string;
   participant_ids: string[];
   last_message_at: string | null;
+  buyer_last_read_at: string | null;
+  seller_last_read_at: string | null;
   created_at: string;
 };
 
@@ -22,7 +24,7 @@ export type MessageRow = {
 };
 
 export type ConversationWithListingRow = ConversationRow & {
-  listings?: { id: string; title: string; status: string } | null;
+  listings?: { id: string; title: string; status: string; seller_id?: string } | null;
 };
 
 export type CreateConversationInput = {
@@ -52,6 +54,13 @@ export type ConversationPreview = {
   lastMessage: string;
   lastMessageAt: string;
   unread: boolean;
+  unreadCount: number;
+};
+
+export type UnreadSummary = {
+  totalUnreadConversations: number;
+  totalUnreadMessages: number;
+  unreadConversationIds: string[];
 };
 
 export type MessageThreadItem = {
@@ -98,10 +107,12 @@ export function mapConversationRowToPreview(
     otherParticipant: ConversationParticipant;
     listingTitle?: string | null;
     lastMessage?: string | null;
+    unreadCount?: number;
   }
 ): ConversationPreview {
   const otherId =
     row.participant_ids.find((id) => id !== currentUserId) ?? options.otherParticipant.id;
+  const unreadCount = options.unreadCount ?? 0;
 
   return {
     id: row.id,
@@ -110,7 +121,8 @@ export function mapConversationRowToPreview(
     otherParticipant: { ...options.otherParticipant, id: otherId },
     lastMessage: options.lastMessage?.trim() || "Conversation started",
     lastMessageAt: row.last_message_at ?? row.created_at,
-    unread: false,
+    unread: unreadCount > 0,
+    unreadCount,
   };
 }
 
