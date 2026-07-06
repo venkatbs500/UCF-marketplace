@@ -35,7 +35,7 @@ test("mobile explore menu opens lost-found and deals links", async ({ page }) =>
 test("marketplace works on mobile", async ({ page }) => {
   await page.goto("/marketplace");
   await expect(page.getByRole("heading", { name: "Marketplace" })).toBeVisible();
-  await expect(page.getByLabel("Search marketplace")).toBeVisible();
+  await expect(page.getByLabel("Search marketplace").first()).toBeVisible();
 });
 
 test("signed-out profile tab routes to sign-in", async ({ page }) => {

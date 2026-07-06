@@ -108,7 +108,15 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "/profile guard",
         steps: ["While signed out, visit /profile"],
         expected: "Redirect to /sign-in.",
-        status: "manual",
+        status: "automated",
+      },
+      {
+        id: "route-profile-dashboard",
+        label: "/profile dashboard",
+        steps: ["Sign in", "Visit /profile"],
+        expected:
+          "Overview, quick actions, My Posts tabs (Marketplace through Deals), account & safety. No fake trust score.",
+        status: "automated",
       },
       {
         id: "route-admin-locked",
@@ -249,7 +257,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         id: "sell-profile-visible",
         label: "Published listing in profile",
         steps: ["Visit /profile after publishing"],
-        expected: '"My Posted Listings" section shows the new listing.',
+        expected: '"My Posts" marketplace tab shows the new listing.',
         status: "manual",
       },
     ],
@@ -1172,7 +1180,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Real mode profile and marketplace honesty",
         steps: ["Visit /profile and /marketplace in real mode"],
         expected:
-          "No fake reviews/activity. Marketplace shows only user-created listings or empty state.",
+          "No fake reviews/activity/trust score. My Posts hub shows user content across modules or honest empty states.",
         status: "manual",
       },
       {
@@ -1245,14 +1253,15 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Real profile shows actual counts",
         steps: ["Set NEXT_PUBLIC_PRODUCT_MODE=real", "Sign in and visit /profile"],
         expected:
-          "Posted and Saved counts match real data. No fake review count or Active: 12.",
+          "Active posts, Saved, Conversations, and Reports show real counts only. No trust score, fake reviews, or Active: 12.",
         status: "manual",
       },
       {
         id: "lm-real-profile-reviews",
-        label: "Real profile hides fake reviews",
-        steps: ["In real mode, open Reviews tab on /profile"],
-        expected: "Reviews coming soon card — no fake review cards.",
+        label: "Real profile has no fake reviews feed",
+        steps: ["In real mode, visit /profile"],
+        expected:
+          "My Posts hub with module tabs. No fake reviews or activity feed. Account & safety section visible.",
         status: "manual",
       },
       {

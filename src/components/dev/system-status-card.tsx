@@ -63,6 +63,13 @@ const STATUS_ROWS: StatusRow[] = [
     status: "ready",
     detail: usesSupabaseMarketplace() ? "Supabase RLS" : "local",
   },
+  {
+    label: "Profile Dashboard / My Posts Hub",
+    status: "ready",
+    detail: isRealDataMode()
+      ? "aggregates Supabase user content across modules"
+      : "demo marketplace + empty module states",
+  },
   { label: "GitHub Actions CI", status: "ready" },
   { label: "Error Boundaries", status: "ready" },
   { label: "E2E Tests", status: "ready" },

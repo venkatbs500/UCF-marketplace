@@ -42,7 +42,7 @@ test("user can delete own listing from profile", async ({ page }) => {
   await page.getByTestId("confirm-delete-listing").click({ force: true });
 
   await expect(page.getByText(listingTitle)).not.toBeVisible();
-  await expect(page.getByText("No posted listings yet")).toBeVisible();
+  await expect(page.getByText("You have not listed anything yet.")).toBeVisible();
 
   await page.goto("/marketplace");
   await page.getByLabel("Search marketplace").fill(listingTitle);

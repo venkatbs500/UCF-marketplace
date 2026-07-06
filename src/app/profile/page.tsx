@@ -1,50 +1,105 @@
 "use client";
 
+import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { ListingGrid } from "@/components/marketplace/listing-grid";
 import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
+import { ProfileQuickActions } from "@/components/profile/profile-quick-actions";
+import { MyPostsHub } from "@/components/profile/my-posts-hub";
+import { ProfileAccountSection } from "@/components/profile/profile-account-section";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useSavedListings } from "@/components/providers/saved-listings-provider";
 import { useUserListings } from "@/components/providers/user-listings-provider";
-import { reviews } from "@/lib/mock-data";
-import { isDemoDataEnabled } from "@/lib/product-mode";
-import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
+import { getMyProfileDashboard } from "@/lib/services/profile-dashboard-service";
+import type { ProfileDashboardData } from "@/lib/services/profile-dashboard-types";
 import { formatDate } from "@/lib/utils";
-import { Shield, Star, Package, Heart, Activity, MapPin, Calendar } from "lucide-react";
-import { ProfileTabs } from "./profile-tabs";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import {
+  Heart,
+  MapPin,
+  MessageCircle,
+  Package,
+  Calendar,
+  Shield,
+  Flag,
+} from "lucide-react";
 
 function ProfileContent() {
   const { user } = useAuth();
   const { savedListingIds } = useSavedListings();
-  const { userListings, userListingsError, isLoading: listingsLoading } = useUserListings();
-  const demoEnabled = isDemoDataEnabled();
-  const supabaseMode = usesSupabaseMarketplace();
+  const { userListings, refreshUserListings } = useUserListings();
+  const [dashboard, setDashboard] = useState<ProfileDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const myListings = useMemo(
+    () => (user ? userListings.filter((listing) => listing.sellerId === user.id) : []),
+    [user, userListings]
+  );
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    void getMyProfileDashboard(user.id, {
+      marketplaceListings: myListings,
+      savedListingCount: savedListingIds.length,
+    }).then((data) => {
+      if (cancelled) return;
+      setDashboard(data);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user, myListings, savedListingIds.length]);
+
+  const refreshDashboard = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    await refreshUserListings();
+    const data = await getMyProfileDashboard(user.id, {
+      marketplaceListings: userListings.filter((listing) => listing.sellerId === user.id),
+      savedListingCount: savedListingIds.length,
+    });
+    setDashboard(data);
+    setLoading(false);
+  }, [user, userListings, savedListingIds.length, refreshUserListings]);
 
   if (!user) return null;
 
-  const myPosted = userListings.filter((l) => l.sellerId === user.id);
-
-  const stats = demoEnabled
-    ? [
-        { icon: Package, label: "Posted", value: myPosted.length },
-        { icon: Heart, label: "Saved", value: savedListingIds.length },
-        { icon: Star, label: "Reviews", value: reviews.length },
-        { icon: Activity, label: "Active", value: 12 },
-      ]
-    : [
-        { icon: Package, label: "Posted", value: myPosted.length },
-        { icon: Heart, label: "Saved", value: savedListingIds.length },
-      ];
+  const stats = [
+    {
+      icon: Package,
+      label: "Active posts",
+      value: dashboard?.stats.activePosts ?? myListings.filter((l) => l.status === "active").length,
+      testId: "profile-stat-active-posts",
+    },
+    {
+      icon: Heart,
+      label: "Saved",
+      value: savedListingIds.length,
+      testId: "profile-stat-saved",
+    },
+    {
+      icon: MessageCircle,
+      label: "Conversations",
+      value: dashboard?.stats.conversations ?? 0,
+      testId: "profile-stat-conversations",
+      href: "/messages",
+    },
+    {
+      icon: Flag,
+      label: "Reports submitted",
+      value: dashboard?.stats.reportsSubmitted ?? 0,
+      testId: "profile-stat-reports",
+    },
+  ];
 
   return (
     <AppShell>
-      <div className="mb-4">
+      <div className="mb-4" data-testid="profile-dashboard">
         <DemoModeBadge />
       </div>
 
@@ -62,6 +117,9 @@ function ProfileContent() {
                 <Shield className="mr-1 h-3 w-3" />
                 Verified Student
               </Badge>
+            )}
+            {!user.hasCompletedOnboarding && (
+              <Badge variant="warning">Complete your profile</Badge>
             )}
           </div>
           <p className="text-sm text-muted">
@@ -89,75 +147,28 @@ function ProfileContent() {
             </div>
           )}
         </div>
-        <Card className="text-center">
-          <CardContent className="px-6 py-4">
-            <p className="text-3xl font-bold text-gold">{user.trustScore}</p>
-            <p className="text-xs text-muted">Trust Score</p>
-            <div className="mt-2 h-2 w-24 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full gold-gradient rounded-full"
-                style={{ width: `${user.trustScore}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      <div
-        className={`mb-8 grid gap-4 ${
-          demoEnabled ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-2"
-        }`}
-      >
+      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.label} className="text-center">
+          <Card key={stat.label} className="text-center" data-testid={stat.testId}>
             <CardContent className="py-4">
               <stat.icon className="mx-auto mb-2 h-5 w-5 text-gold" />
               <p className="text-2xl font-bold">{stat.value}</p>
               <p className="text-xs text-muted">{stat.label}</p>
+              {stat.href && (
+                <Link href={stat.href} className="mt-1 block text-[10px] text-gold">
+                  Open messages
+                </Link>
+              )}
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <section className="mb-10">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold">My Posted Listings</h2>
-          <Link href="/sell">
-            <Button size="sm" variant="outline">
-              Post New
-            </Button>
-          </Link>
-        </div>
-        {userListingsError && (
-          <p role="alert" className="mb-4 text-sm text-red-400">
-            We could not load your listings. Please try again.
-          </p>
-        )}
-        {listingsLoading ? (
-          <Card>
-            <CardContent className="py-8 text-center text-sm text-muted">
-              Loading your listings...
-            </CardContent>
-          </Card>
-        ) : myPosted.length > 0 ? (
-          <ListingGrid listings={myPosted} ownerActionVariant="profile" />
-        ) : (
-          <Card>
-            <CardContent className="py-8 text-center">
-              <p className="mb-4 text-sm text-muted">
-                {supabaseMode
-                  ? "You have not posted any listings yet."
-                  : "No posted listings yet"}
-              </p>
-              <Link href="/sell">
-                <Button>Post a listing</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        )}
-      </section>
-
-      <ProfileTabs reviews={reviews} demoEnabled={demoEnabled} />
+      <ProfileQuickActions />
+      <MyPostsHub dashboard={dashboard} loading={loading} onRefresh={refreshDashboard} />
+      <ProfileAccountSection />
     </AppShell>
   );
 }

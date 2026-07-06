@@ -3,7 +3,7 @@
 import { cn } from "@/lib/utils";
 
 interface TabsProps {
-  tabs: { id: string; label: string }[];
+  tabs: { id: string; label: string; testId?: string }[];
   activeTab: string;
   onTabChange: (id: string) => void;
   className?: string;
@@ -15,7 +15,9 @@ export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
       {tabs.map((tab) => (
         <button
           key={tab.id}
+          type="button"
           onClick={() => onTabChange(tab.id)}
+          data-testid={tab.testId}
           className={cn(
             "shrink-0 rounded-2xl px-4 py-2 text-sm font-medium transition-all",
             activeTab === tab.id
