@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { MessageCircle, Shield } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthGuard } from "@/components/auth/auth-guard";
@@ -16,18 +17,32 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { RealMessagesInbox } from "@/components/messages/real-messages-inbox";
 import { useUnreadMessages } from "@/components/providers/unread-messages-provider";
 import { UnreadBadge } from "@/components/ui/unread-badge";
+import type { MessagePreview } from "@/lib/types";
 import { messagePreviews } from "@/lib/mock-data";
 import { formatRelativeTime, cn } from "@/lib/utils";
 import { isDemoDataEnabled } from "@/lib/product-mode";
 import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 
+function demoContextLabel(contextType: MessagePreview["contextType"]): string {
+  if (contextType === "housing") return "Housing";
+  if (contextType === "listing") return "Marketplace";
+  if (contextType === "tutoring") return "Tutoring";
+  return "General";
+}
+
 function DemoMessagesContent() {
-  const [activeId, setActiveId] = useState(messagePreviews[0]?.id);
+  const searchParams = useSearchParams();
+  const conversationFromUrl = searchParams.get("conversation");
+  const [pickedId, setPickedId] = useState<string | null>(null);
+  const activeId =
+    pickedId ??
+    messagePreviews.find((preview) => preview.id === conversationFromUrl)?.id ??
+    messagePreviews[0]?.id;
   const { markDemoConversationRead, isDemoConversationUnread } = useUnreadMessages();
   const active = messagePreviews.find((m) => m.id === activeId);
 
   const handleSelect = (id: string) => {
-    setActiveId(id);
+    setPickedId(id);
     if (messagePreviews.find((preview) => preview.id === id)?.unread) {
       markDemoConversationRead(id);
     }
@@ -63,6 +78,7 @@ function DemoMessagesContent() {
               key={msg.id}
               type="button"
               onClick={() => handleSelect(msg.id)}
+              data-testid={`conversation-${msg.id}`}
               className={cn(
                 "flex w-full items-start gap-3 rounded-2xl p-4 text-left transition-colors",
                 activeId === msg.id
@@ -85,7 +101,10 @@ function DemoMessagesContent() {
                     </span>
                   </div>
                 </div>
-                <Badge variant="outline" className="my-1 text-[10px]">
+                <Badge variant="secondary" className="my-1 text-[10px]" data-testid="conversation-context-label">
+                  {demoContextLabel(msg.contextType)}
+                </Badge>
+                <Badge variant="outline" className="my-1 ml-1 text-[10px]">
                   {msg.context}
                 </Badge>
                 <p

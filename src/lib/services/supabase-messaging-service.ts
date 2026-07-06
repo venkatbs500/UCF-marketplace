@@ -59,14 +59,27 @@ type BuyerSellerIds = {
   sellerId: string;
 };
 
+const CONVERSATION_SELECT =
+  "*, listings(id, title, status, seller_id), housing_posts(id, title, status, user_id)";
+
 function resolveBuyerSellerIds(
   row: ConversationRow,
-  listingSellerId?: string | null
+  options?: {
+    listingSellerId?: string | null;
+    housingPosterId?: string | null;
+  }
 ): BuyerSellerIds {
-  if (row.listing_id && listingSellerId) {
+  if (row.housing_post_id && options?.housingPosterId) {
     return {
       buyerId: row.created_by,
-      sellerId: listingSellerId,
+      sellerId: options.housingPosterId,
+    };
+  }
+
+  if (row.listing_id && options?.listingSellerId) {
+    return {
+      buyerId: row.created_by,
+      sellerId: options.listingSellerId,
     };
   }
 
@@ -81,12 +94,27 @@ function resolveBuyerSellerIds(
 function getLastReadAtForUser(
   row: ConversationRow,
   userId: string,
-  listingSellerId?: string | null
+  options?: {
+    listingSellerId?: string | null;
+    housingPosterId?: string | null;
+  }
 ): string | null {
-  const { buyerId, sellerId } = resolveBuyerSellerIds(row, listingSellerId);
+  const { buyerId, sellerId } = resolveBuyerSellerIds(row, options);
   if (userId === buyerId) return row.buyer_last_read_at;
   if (userId === sellerId) return row.seller_last_read_at;
   return row.buyer_last_read_at ?? row.seller_last_read_at;
+}
+
+function getParticipantReadContext(
+  row: ConversationWithListingRow
+): {
+  listingSellerId: string | null;
+  housingPosterId: string | null;
+} {
+  return {
+    listingSellerId: row.listings?.seller_id ?? null,
+    housingPosterId: row.housing_posts?.user_id ?? null,
+  };
 }
 
 function countUnreadMessagesInThread(
@@ -116,6 +144,24 @@ async function fetchListingSellerIds(
 
   for (const row of data ?? []) {
     map.set(row.id as string, row.seller_id as string);
+  }
+  return map;
+}
+
+async function fetchHousingPosterIds(
+  housingPostIds: string[]
+): Promise<Map<string, string>> {
+  const client = getSupabaseBrowserClient();
+  const map = new Map<string, string>();
+  if (!client || housingPostIds.length === 0) return map;
+
+  const { data } = await client
+    .from("housing_posts")
+    .select("id, user_id")
+    .in("id", [...new Set(housingPostIds)]);
+
+  for (const row of data ?? []) {
+    map.set(row.id as string, row.user_id as string);
   }
   return map;
 }
@@ -155,7 +201,7 @@ export async function getConversationUnreadCount(
 
   const { data, error } = await client
     .from("conversations")
-    .select("*, listings(id, seller_id)")
+    .select(CONVERSATION_SELECT)
     .eq("id", conversationId)
     .maybeSingle();
 
@@ -167,9 +213,9 @@ export async function getConversationUnreadCount(
     return { count: 0 };
   }
 
-  const row = data as ConversationWithListingRow & { listings?: { seller_id: string } | null };
-  const listingSellerId = row.listings?.seller_id ?? null;
-  const lastReadAt = getLastReadAtForUser(row, userId, listingSellerId);
+  const row = data as ConversationWithListingRow;
+  const readContext = getParticipantReadContext(row);
+  const lastReadAt = getLastReadAtForUser(row, userId, readContext);
   const count = await countUnreadMessagesForConversation(conversationId, userId, lastReadAt);
   return { count };
 }
@@ -233,7 +279,7 @@ export async function markConversationRead(
 
   const { data, error } = await client
     .from("conversations")
-    .select("*, listings(id, seller_id)")
+    .select(CONVERSATION_SELECT)
     .eq("id", conversationId)
     .maybeSingle();
 
@@ -245,9 +291,9 @@ export async function markConversationRead(
     return { success: false, error: "Conversation not found." };
   }
 
-  const row = data as ConversationWithListingRow & { listings?: { seller_id: string } | null };
-  const listingSellerId = row.listings?.seller_id ?? null;
-  const { buyerId, sellerId } = resolveBuyerSellerIds(row, listingSellerId);
+  const row = data as ConversationWithListingRow;
+  const readContext = getParticipantReadContext(row);
+  const { buyerId, sellerId } = resolveBuyerSellerIds(row, readContext);
   const now = new Date().toISOString();
 
   const patch =
@@ -284,7 +330,7 @@ export async function getMyConversations(userId: string): Promise<{
 
   const { data, error } = await client
     .from("conversations")
-    .select("*, listings(id, title, status, seller_id)")
+    .select(CONVERSATION_SELECT)
     .contains("participant_ids", [userId])
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false });
@@ -300,6 +346,9 @@ export async function getMyConversations(userId: string): Promise<{
 
   const listingSellerIds = await fetchListingSellerIds(
     rows.map((row) => row.listing_id).filter((id): id is string => Boolean(id))
+  );
+  const housingPosterIds = await fetchHousingPosterIds(
+    rows.map((row) => row.housing_post_id).filter((id): id is string => Boolean(id))
   );
 
   const conversationIds = rows.map((row) => row.id);
@@ -331,10 +380,15 @@ export async function getMyConversations(userId: string): Promise<{
     const otherId = row.participant_ids.find((id) => id !== userId) ?? "";
     const otherProfile = profiles.get(otherId);
     const latest = latestMessages.get(row.id);
-    const listingSellerId = row.listing_id
-      ? listingSellerIds.get(row.listing_id) ?? null
-      : null;
-    const lastReadAt = getLastReadAtForUser(row, userId, listingSellerId);
+    const readContext = {
+      listingSellerId: row.listing_id
+        ? listingSellerIds.get(row.listing_id) ?? null
+        : null,
+      housingPosterId: row.housing_post_id
+        ? housingPosterIds.get(row.housing_post_id) ?? row.housing_posts?.user_id ?? null
+        : null,
+    };
+    const lastReadAt = getLastReadAtForUser(row, userId, readContext);
     const unreadCount = countUnreadMessagesInThread(
       messagesByConversation.get(row.id) ?? [],
       userId,
@@ -344,6 +398,7 @@ export async function getMyConversations(userId: string): Promise<{
     return mapConversationRowToPreview(row, userId, {
       otherParticipant: mapProfileToParticipant(otherProfile, otherId),
       listingTitle: row.listings?.title ?? null,
+      housingTitle: row.housing_posts?.title ?? null,
       lastMessage: latest?.body ?? null,
       unreadCount,
     });
@@ -367,7 +422,7 @@ export async function getConversation(
 
   const { data, error } = await client
     .from("conversations")
-    .select("*, listings(id, title, status, seller_id)")
+    .select(CONVERSATION_SELECT)
     .eq("id", conversationId)
     .maybeSingle();
 
@@ -379,13 +434,13 @@ export async function getConversation(
     return { conversation: null, messages: [] };
   }
 
-  const row = data as ConversationWithListingRow & { listings?: { seller_id: string } | null };
+  const row = data as ConversationWithListingRow;
   if (!row.participant_ids.includes(userId)) {
     return { conversation: null, messages: [], error: "Conversation not found." };
   }
 
-  const listingSellerId = row.listings?.seller_id ?? null;
-  const lastReadAt = getLastReadAtForUser(row, userId, listingSellerId);
+  const readContext = getParticipantReadContext(row);
+  const lastReadAt = getLastReadAtForUser(row, userId, readContext);
 
   const otherId = row.participant_ids.find((id) => id !== userId) ?? "";
   const profiles = await fetchProfilesByIds([...row.participant_ids, userId]);
@@ -415,6 +470,7 @@ export async function getConversation(
   const conversation = mapConversationRowToPreview(row, userId, {
     otherParticipant: mapProfileToParticipant(profiles.get(otherId), otherId),
     listingTitle: row.listings?.title ?? null,
+    housingTitle: row.housing_posts?.title ?? null,
     lastMessage: latest?.body ?? null,
     unreadCount,
   });
@@ -470,6 +526,7 @@ export async function getOrCreateListingConversation(
     .from("conversations")
     .insert({
       listing_id: listingId,
+      context_type: "marketplace_listing",
       created_by: buyerId,
       participant_ids: [buyerId, sellerId],
       last_message_at: now,
@@ -484,6 +541,83 @@ export async function getOrCreateListingConversation(
         .select("id")
         .eq("listing_id", listingId)
         .contains("participant_ids", [buyerId, sellerId])
+        .maybeSingle();
+      if (retry?.id) return { conversationId: retry.id as string };
+    }
+    return { conversationId: null, error: mapSupabaseError(createError) };
+  }
+
+  return { conversationId: created.id as string };
+}
+
+export async function getOrCreateHousingConversation(
+  housingPostId: string,
+  buyerId: string
+): Promise<{ conversationId: string | null; error?: string }> {
+  const client = getSupabaseBrowserClient();
+  if (!client) {
+    return { conversationId: null, error: "Supabase is not configured." };
+  }
+
+  const { data: housingPost, error: housingError } = await client
+    .from("housing_posts")
+    .select("id, user_id, status, title")
+    .eq("id", housingPostId)
+    .maybeSingle();
+
+  if (housingError) {
+    return { conversationId: null, error: mapSupabaseError(housingError) };
+  }
+
+  if (!housingPost || housingPost.status !== "active") {
+    return { conversationId: null, error: "This housing post is no longer available." };
+  }
+
+  const posterId = housingPost.user_id as string;
+  if (posterId === buyerId) {
+    return {
+      conversationId: null,
+      error: "You cannot message yourself about your own housing post.",
+    };
+  }
+
+  const { data: existing, error: existingError } = await client
+    .from("conversations")
+    .select("id")
+    .eq("housing_post_id", housingPostId)
+    .eq("created_by", buyerId)
+    .contains("participant_ids", [buyerId, posterId])
+    .maybeSingle();
+
+  if (existingError) {
+    return { conversationId: null, error: mapSupabaseError(existingError) };
+  }
+
+  if (existing?.id) {
+    return { conversationId: existing.id as string };
+  }
+
+  const now = new Date().toISOString();
+  const { data: created, error: createError } = await client
+    .from("conversations")
+    .insert({
+      housing_post_id: housingPostId,
+      context_type: "housing_post",
+      created_by: buyerId,
+      participant_ids: [buyerId, posterId],
+      last_message_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (createError || !created) {
+    if (createError?.code === "23505") {
+      const { data: retry } = await client
+        .from("conversations")
+        .select("id")
+        .eq("housing_post_id", housingPostId)
+        .eq("created_by", buyerId)
+        .contains("participant_ids", [buyerId, posterId])
         .maybeSingle();
       if (retry?.id) return { conversationId: retry.id as string };
     }

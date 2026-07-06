@@ -1,10 +1,17 @@
 import type { ProfileRow } from "./supabase-marketplace-types";
 
+export type ConversationContextType =
+  | "marketplace_listing"
+  | "housing_post"
+  | "tutor_profile"
+  | "unknown";
+
 export type ConversationRow = {
   id: string;
   listing_id: string | null;
   housing_post_id: string | null;
   tutor_profile_id: string | null;
+  context_type?: string | null;
   created_by: string;
   participant_ids: string[];
   last_message_at: string | null;
@@ -25,7 +32,67 @@ export type MessageRow = {
 
 export type ConversationWithListingRow = ConversationRow & {
   listings?: { id: string; title: string; status: string; seller_id?: string } | null;
+  housing_posts?: {
+    id: string;
+    title: string;
+    status: string;
+    user_id?: string;
+  } | null;
 };
+
+export type ConversationContext = {
+  contextType: ConversationContextType;
+  contextTitle: string | null;
+  contextId: string | null;
+  contextHref: string | null;
+  contextLabel: string;
+};
+
+export function getConversationContext(
+  row: ConversationRow,
+  options?: {
+    listingTitle?: string | null;
+    housingTitle?: string | null;
+  }
+): ConversationContext {
+  if (row.housing_post_id) {
+    return {
+      contextType: "housing_post",
+      contextTitle: options?.housingTitle ?? null,
+      contextId: row.housing_post_id,
+      contextHref: `/housing/${row.housing_post_id}`,
+      contextLabel: "Housing",
+    };
+  }
+
+  if (row.listing_id) {
+    return {
+      contextType: "marketplace_listing",
+      contextTitle: options?.listingTitle ?? null,
+      contextId: row.listing_id,
+      contextHref: `/marketplace/${row.listing_id}`,
+      contextLabel: "Marketplace",
+    };
+  }
+
+  if (row.tutor_profile_id) {
+    return {
+      contextType: "tutor_profile",
+      contextTitle: null,
+      contextId: row.tutor_profile_id,
+      contextHref: "/tutoring",
+      contextLabel: "Tutoring",
+    };
+  }
+
+  return {
+    contextType: "unknown",
+    contextTitle: null,
+    contextId: null,
+    contextHref: null,
+    contextLabel: "Conversation",
+  };
+}
 
 export type CreateConversationInput = {
   listingId: string;
@@ -50,6 +117,12 @@ export type ConversationPreview = {
   id: string;
   listingId: string | null;
   listingTitle: string | null;
+  housingPostId: string | null;
+  contextType: ConversationContextType;
+  contextTitle: string | null;
+  contextId: string | null;
+  contextHref: string | null;
+  contextLabel: string;
   otherParticipant: ConversationParticipant;
   lastMessage: string;
   lastMessageAt: string;
@@ -106,6 +179,7 @@ export function mapConversationRowToPreview(
   options: {
     otherParticipant: ConversationParticipant;
     listingTitle?: string | null;
+    housingTitle?: string | null;
     lastMessage?: string | null;
     unreadCount?: number;
   }
@@ -113,11 +187,22 @@ export function mapConversationRowToPreview(
   const otherId =
     row.participant_ids.find((id) => id !== currentUserId) ?? options.otherParticipant.id;
   const unreadCount = options.unreadCount ?? 0;
+  const context = getConversationContext(row, {
+    listingTitle: options.listingTitle,
+    housingTitle: options.housingTitle,
+  });
 
   return {
     id: row.id,
     listingId: row.listing_id,
-    listingTitle: options.listingTitle ?? null,
+    listingTitle:
+      context.contextType === "marketplace_listing" ? context.contextTitle : null,
+    housingPostId: row.housing_post_id,
+    contextType: context.contextType,
+    contextTitle: context.contextTitle,
+    contextId: context.contextId,
+    contextHref: context.contextHref,
+    contextLabel: context.contextLabel,
     otherParticipant: { ...options.otherParticipant, id: otherId },
     lastMessage: options.lastMessage?.trim() || "Conversation started",
     lastMessageAt: row.last_message_at ?? row.created_at,

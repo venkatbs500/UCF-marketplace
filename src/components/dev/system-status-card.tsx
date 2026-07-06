@@ -116,6 +116,20 @@ const STATUS_ROWS: StatusRow[] = [
     status: isModerationRealtimeMode() ? "ready" : "not-connected",
     detail: isModerationRealtimeMode() ? "housing_post target type" : "demo preview",
   },
+  {
+    label: "Housing Contact Messaging",
+    status: usesSupabaseMessaging() ? "ready" : "not-connected",
+    detail: usesSupabaseMessaging()
+      ? "housing_post conversations"
+      : "demo preview via msg-3",
+  },
+  {
+    label: "Housing Conversation Realtime",
+    status: usesSupabaseMessaging() ? "ready" : "not-connected",
+    detail: usesSupabaseMessaging()
+      ? "shared realtime + unread"
+      : "demo unread badges",
+  },
   { label: "AI API", status: "not-connected" },
 ];
 

@@ -205,11 +205,16 @@ export function RealMessagesInbox() {
       <EmptyState
         icon={MessageCircle}
         title="No messages yet"
-        description="When you contact a seller, your conversations will appear here."
+        description="When you contact a seller or housing poster, your conversations will appear here."
         action={
-          <Link href="/marketplace">
-            <Button>Browse marketplace</Button>
-          </Link>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Link href="/marketplace">
+              <Button>Browse marketplace</Button>
+            </Link>
+            <Link href="/housing">
+              <Button variant="secondary">Browse housing</Button>
+            </Link>
+          </div>
         }
       />
     ),
@@ -330,9 +335,18 @@ export function RealMessagesInbox() {
                     </span>
                   </div>
                 </div>
-                {conversation.listingTitle && (
-                  <Badge variant="outline" className="my-1 text-[10px]">
-                    {conversation.listingTitle}
+                {conversation.contextLabel && (
+                  <Badge
+                    variant="secondary"
+                    className="my-1 text-[10px]"
+                    data-testid="conversation-context-label"
+                  >
+                    {conversation.contextLabel}
+                  </Badge>
+                )}
+                {conversation.contextTitle && (
+                  <Badge variant="outline" className="my-1 ml-1 text-[10px]">
+                    {conversation.contextTitle}
                   </Badge>
                 )}
                 <p
@@ -384,13 +398,27 @@ export function RealMessagesInbox() {
                   size="md"
                   verified={activeConversation.otherParticipant.isVerifiedStudent}
                 />
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold">{activeConversation.otherParticipant.name}</p>
-                  <p className="text-xs text-muted">
-                    {activeConversation.listingTitle
-                      ? `Re: ${activeConversation.listingTitle}`
-                      : "Marketplace conversation"}
-                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px]">
+                      {activeConversation.contextLabel}
+                    </Badge>
+                    {activeConversation.contextTitle && activeConversation.contextHref ? (
+                      <Link
+                        href={activeConversation.contextHref}
+                        className="truncate text-xs text-gold hover:underline"
+                      >
+                        {activeConversation.contextTitle}
+                      </Link>
+                    ) : (
+                      <p className="text-xs text-muted">
+                        {activeConversation.contextTitle
+                          ? `Re: ${activeConversation.contextTitle}`
+                          : "Conversation"}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div className="ml-auto flex items-center gap-2">
                   <ReportDialog

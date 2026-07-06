@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bed, Bath, Calendar, Home, MapPin, MessageCircle, Pencil, Trash2 } from "lucide-react";
+import { Bed, Bath, Calendar, Home, MapPin, Pencil, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ReportDialog } from "@/components/safety/report-dialog";
+import { MessageHousingPosterButton } from "@/components/housing/message-housing-poster-button";
 import { useAuth } from "@/components/providers/auth-provider";
 import {
   deleteHousingPost,
@@ -231,11 +232,19 @@ export function HousingDetailView({ housingId }: { housingId: string }) {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <Button variant="secondary" className="w-full" disabled>
-                    <MessageCircle className="h-4 w-4" />
-                    Messaging for housing is coming next
-                  </Button>
+                <div className="space-y-3">
+                  <MessageHousingPosterButton
+                    housingPostId={post.id}
+                    posterId={post.userId}
+                    housingTitle={post.title}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-muted">
+                    Ask about availability, lease dates, roommates, or tour details.
+                  </p>
+                  <p className="text-xs text-muted">
+                    Keep payments and tours safe. Meet in public places first.
+                  </p>
                   <ReportDialog
                     targetType="housing_post"
                     targetId={post.id}

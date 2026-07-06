@@ -312,7 +312,19 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Housing detail page",
         steps: ["Open /housing/[id] for an active post"],
         expected:
-          "Gallery, rent, location, description, poster info. Contact CTA shows messaging coming next.",
+          "Gallery, rent, location, description, poster info. Message poster opens Supabase housing conversation.",
+        status: "manual",
+      },
+      {
+        id: "housing-message-poster",
+        label: "Message housing poster",
+        steps: [
+          "Sign in as verified student (not the poster)",
+          "Open /housing/[id]",
+          "Click Message poster",
+        ],
+        expected:
+          "Creates or opens housing conversation. Routes to /messages?conversation=.... Realtime/unread work.",
         status: "manual",
       },
       {
@@ -346,6 +358,53 @@ export const QA_CHECKLIST: QACheckSection[] = [
     ],
   },
   {
+    id: "housing-messaging",
+    title: "Housing Contact Messaging",
+    description: "Message housing posters via shared Supabase conversations.",
+    items: [
+      {
+        id: "housing-msg-create",
+        label: "Create housing conversation",
+        steps: [
+          "Account A posts housing",
+          "Account B opens housing detail",
+          "Click Message poster",
+        ],
+        expected:
+          "Row in conversations with housing_post_id and context_type housing_post. Participants are buyer + poster.",
+        status: "manual",
+      },
+      {
+        id: "housing-msg-thread",
+        label: "Send and receive housing messages",
+        steps: ["Open housing conversation in /messages", "Send message from both accounts"],
+        expected: "Messages appear with realtime delivery and unread badges for both users.",
+        status: "manual",
+      },
+      {
+        id: "housing-msg-inbox-label",
+        label: "Inbox shows housing context",
+        steps: ["Open /messages with a housing conversation"],
+        expected: "Housing context label and post title. Link back to /housing/[id].",
+        status: "manual",
+      },
+      {
+        id: "housing-msg-no-self",
+        label: "Cannot message own housing post",
+        steps: ["Open your own housing post detail"],
+        expected: "No Message poster button. Owner controls only.",
+        status: "manual",
+      },
+      {
+        id: "housing-msg-report",
+        label: "Report housing conversation messages",
+        steps: ["Report message or conversation from housing thread"],
+        expected: "Existing report flow works. Admin moderation unchanged.",
+        status: "manual",
+      },
+    ],
+  },
+  {
     id: "housing-actions",
     title: "Housing Actions (Demo)",
     description: "Demo-mode housing tabs and protected actions.",
@@ -354,7 +413,8 @@ export const QA_CHECKLIST: QACheckSection[] = [
         id: "housing-contact",
         label: "Contact housing poster",
         steps: ["Visit /housing", "Open a housing post detail"],
-        expected: "Messaging for housing is coming next placeholder. No private email exposed.",
+        expected:
+          "Message poster opens demo or Supabase conversation. No private email exposed.",
         status: "manual",
       },
       {
@@ -530,7 +590,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Housing E2E",
         steps: ["Run npm run e2e — housing.spec.ts"],
         expected:
-          "Browse loads, post CTA auth guard, demo detail, invalid id not-found pass.",
+          "Browse loads, post CTA auth guard, Message poster flow, demo detail, invalid id not-found pass.",
         status: "automated",
       },
     ],
