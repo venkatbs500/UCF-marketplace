@@ -149,6 +149,15 @@ export function AdminDashboard() {
     await runStatusUpdate(report.id, "resolved");
   };
 
+  const runHideStudentDiscount = async (report: ReportItem) => {
+    const result = await service.hideStudentDiscountForModeration(report.targetId);
+    if (!result.success) {
+      setError(result.error ?? "We could not remove this discount.");
+      return;
+    }
+    await runStatusUpdate(report.id, "resolved");
+  };
+
   return (
     <>
       <div className="mb-4 flex items-center gap-2">
@@ -383,6 +392,23 @@ export function AdminDashboard() {
                       }
                     >
                       Remove event
+                    </Button>
+                  )}
+                  {report.targetType === "student_discount" && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() =>
+                        void askConfirm({
+                          title: "Remove discount?",
+                          description:
+                            "This will set the discount status to removed and hide it from browse.",
+                          onConfirm: () => void runHideStudentDiscount(report),
+                          destructive: true,
+                        })
+                      }
+                    >
+                      Remove discount
                     </Button>
                   )}
                 </div>

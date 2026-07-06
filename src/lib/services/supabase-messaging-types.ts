@@ -7,6 +7,7 @@ export type ConversationContextType =
   | "lost_found_item"
   | "campus_job"
   | "campus_event"
+  | "student_discount"
   | "unknown";
 
 export type ConversationRow = {
@@ -17,6 +18,7 @@ export type ConversationRow = {
   lost_found_item_id?: string | null;
   campus_job_id?: string | null;
   campus_event_id?: string | null;
+  student_discount_id?: string | null;
   context_type?: string | null;
   created_by: string;
   participant_ids: string[];
@@ -69,6 +71,12 @@ export type ConversationWithListingRow = ConversationRow & {
     status: string;
     posted_by?: string;
   } | null;
+  student_discounts?: {
+    id: string;
+    title: string;
+    status: string;
+    posted_by?: string;
+  } | null;
 };
 
 export type ConversationContext = {
@@ -88,6 +96,7 @@ export function getConversationContext(
     lostFoundTitle?: string | null;
     campusJobTitle?: string | null;
     campusEventTitle?: string | null;
+    studentDiscountTitle?: string | null;
   }
 ): ConversationContext {
   if (row.tutor_profile_id) {
@@ -137,6 +146,16 @@ export function getConversationContext(
       contextId: row.campus_event_id,
       contextHref: `/events/${row.campus_event_id}`,
       contextLabel: "Events",
+    };
+  }
+
+  if (row.student_discount_id) {
+    return {
+      contextType: "student_discount",
+      contextTitle: options?.studentDiscountTitle ?? null,
+      contextId: row.student_discount_id,
+      contextHref: `/discounts/${row.student_discount_id}`,
+      contextLabel: "Discounts",
     };
   }
 
@@ -249,6 +268,7 @@ export function mapConversationRowToPreview(
     lostFoundTitle?: string | null;
     campusJobTitle?: string | null;
     campusEventTitle?: string | null;
+    studentDiscountTitle?: string | null;
     lastMessage?: string | null;
     unreadCount?: number;
   }
@@ -263,6 +283,7 @@ export function mapConversationRowToPreview(
     lostFoundTitle: options.lostFoundTitle,
     campusJobTitle: options.campusJobTitle,
     campusEventTitle: options.campusEventTitle,
+    studentDiscountTitle: options.studentDiscountTitle,
   });
 
   return {

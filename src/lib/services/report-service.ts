@@ -36,6 +36,9 @@ export type ReportService = {
   hideCampusEventForModeration: (
     eventId: string
   ) => Promise<{ success: boolean; error?: string }>;
+  hideStudentDiscountForModeration: (
+    discountId: string
+  ) => Promise<{ success: boolean; error?: string }>;
 };
 
 function isSupabaseModerationMode(): boolean {
@@ -74,6 +77,9 @@ const mockReportService: ReportService = {
     return { success: true };
   },
   async hideCampusEventForModeration() {
+    return { success: true };
+  },
+  async hideStudentDiscountForModeration() {
     return { success: true };
   },
 };

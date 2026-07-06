@@ -223,6 +223,19 @@ export async function hideCampusEventForModeration(
   return { success: true };
 }
 
+export async function hideStudentDiscountForModeration(
+  discountId: string
+): Promise<{ success: boolean; error?: string }> {
+  const client = getSupabaseBrowserClient();
+  if (!client) return { success: false, error: "Supabase is not configured." };
+  const { error } = await client
+    .from("student_discounts")
+    .update({ status: "removed" })
+    .eq("id", discountId);
+  if (error) return { success: false, error: mapSupabaseError(error) };
+  return { success: true };
+}
+
 export const supabaseReportService = {
   createReport,
   getMyReports,
@@ -235,4 +248,5 @@ export const supabaseReportService = {
   hideLostFoundItemForModeration,
   hideCampusJobForModeration,
   hideCampusEventForModeration,
+  hideStudentDiscountForModeration,
 };

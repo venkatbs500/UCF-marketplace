@@ -1199,6 +1199,15 @@ export const messagePreviews: MessagePreview[] = [
     context: "Knight Hacks 2025",
     contextType: "events",
   },
+  {
+    id: "msg-8",
+    participant: users[4],
+    lastMessage: "Does the KNIGHT20 code work on binders too?",
+    timestamp: "2025-06-19T14:00:00",
+    unread: false,
+    context: "Campus Copy Center",
+    contextType: "discounts",
+  },
 ];
 
 export const myListings = listings.filter((l) => l.sellerId === "seller-5");

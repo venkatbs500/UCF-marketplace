@@ -9,6 +9,7 @@ import {
   getOrCreateLostFoundConversation,
   getOrCreateCampusJobConversation,
   getOrCreateCampusEventConversation,
+  getOrCreateStudentDiscountConversation,
   getOrCreateTutorConversation,
   getUnreadConversationCount,
   getUnreadConversationIds,
@@ -39,6 +40,7 @@ export const DEMO_TUTOR_CONVERSATION_ID = "msg-2";
 export const DEMO_LOST_FOUND_CONVERSATION_ID = "msg-5";
 export const DEMO_CAMPUS_JOB_CONVERSATION_ID = "msg-6";
 export const DEMO_CAMPUS_EVENT_CONVERSATION_ID = "msg-7";
+export const DEMO_STUDENT_DISCOUNT_CONVERSATION_ID = "msg-8";
 
 export const supabaseMessagingService = {
   getMyConversations,
@@ -48,6 +50,7 @@ export const supabaseMessagingService = {
   getOrCreateLostFoundConversation,
   getOrCreateCampusJobConversation,
   getOrCreateCampusEventConversation,
+  getOrCreateStudentDiscountConversation,
   getOrCreateTutorConversation,
   sendMessage,
   getUnreadConversationCount,
@@ -96,6 +99,13 @@ export async function openDemoCampusEventConversation(
 ): Promise<{ conversationId: string }> {
   void eventId;
   return { conversationId: DEMO_CAMPUS_EVENT_CONVERSATION_ID };
+}
+
+export async function openDemoStudentDiscountConversation(
+  discountId: string
+): Promise<{ conversationId: string }> {
+  void discountId;
+  return { conversationId: DEMO_STUDENT_DISCOUNT_CONVERSATION_ID };
 }
 
 export async function fetchMyConversationPreviews(

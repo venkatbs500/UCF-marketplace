@@ -60,7 +60,7 @@ type BuyerSellerIds = {
 };
 
 const CONVERSATION_SELECT =
-  "*, listings(id, title, status, seller_id), housing_posts(id, title, status, user_id), tutoring_profiles(id, display_name, status, user_id, subjects), lost_found_items(id, title, status, user_id), campus_jobs(id, title, status, posted_by), campus_events(id, title, status, posted_by)";
+  "*, listings(id, title, status, seller_id), housing_posts(id, title, status, user_id), tutoring_profiles(id, display_name, status, user_id, subjects), lost_found_items(id, title, status, user_id), campus_jobs(id, title, status, posted_by), campus_events(id, title, status, posted_by), student_discounts(id, title, status, posted_by)";
 
 function resolveBuyerSellerIds(
   row: ConversationRow,
@@ -71,6 +71,7 @@ function resolveBuyerSellerIds(
     lostFoundPosterId?: string | null;
     campusJobPosterId?: string | null;
     campusEventOrganizerId?: string | null;
+    studentDiscountPosterId?: string | null;
   }
 ): BuyerSellerIds {
   if (row.tutor_profile_id && options?.tutorOwnerId) {
@@ -108,6 +109,13 @@ function resolveBuyerSellerIds(
     };
   }
 
+  if (row.student_discount_id && options?.studentDiscountPosterId) {
+    return {
+      buyerId: row.created_by,
+      sellerId: options.studentDiscountPosterId,
+    };
+  }
+
   if (row.listing_id && options?.listingSellerId) {
     return {
       buyerId: row.created_by,
@@ -133,6 +141,7 @@ function getLastReadAtForUser(
     lostFoundPosterId?: string | null;
     campusJobPosterId?: string | null;
     campusEventOrganizerId?: string | null;
+    studentDiscountPosterId?: string | null;
   }
 ): string | null {
   const { buyerId, sellerId } = resolveBuyerSellerIds(row, options);
@@ -150,6 +159,7 @@ function getParticipantReadContext(
   lostFoundPosterId: string | null;
   campusJobPosterId: string | null;
   campusEventOrganizerId: string | null;
+  studentDiscountPosterId: string | null;
 } {
   return {
     listingSellerId: row.listings?.seller_id ?? null,
@@ -158,6 +168,7 @@ function getParticipantReadContext(
     lostFoundPosterId: row.lost_found_items?.user_id ?? null,
     campusJobPosterId: row.campus_jobs?.posted_by ?? null,
     campusEventOrganizerId: row.campus_events?.posted_by ?? null,
+    studentDiscountPosterId: row.student_discounts?.posted_by ?? null,
   };
 }
 
@@ -305,6 +316,29 @@ function campusJobDisplayTitle(row: ConversationWithListingRow): string | null {
 function campusEventDisplayTitle(row: ConversationWithListingRow): string | null {
   if (!row.campus_event_id) return null;
   return row.campus_events?.title?.trim() || "Campus event";
+}
+
+async function fetchStudentDiscountPosterIds(
+  discountIds: string[]
+): Promise<Map<string, string>> {
+  const client = getSupabaseBrowserClient();
+  const map = new Map<string, string>();
+  if (!client || discountIds.length === 0) return map;
+
+  const { data } = await client
+    .from("student_discounts")
+    .select("id, posted_by")
+    .in("id", [...new Set(discountIds)]);
+
+  for (const row of data ?? []) {
+    map.set(row.id as string, row.posted_by as string);
+  }
+  return map;
+}
+
+function studentDiscountDisplayTitle(row: ConversationWithListingRow): string | null {
+  if (!row.student_discount_id) return null;
+  return row.student_discounts?.title?.trim() || "Student discount";
 }
 
 async function countUnreadMessagesForConversation(
@@ -503,6 +537,9 @@ export async function getMyConversations(userId: string): Promise<{
   const campusEventOrganizerIds = await fetchCampusEventOrganizerIds(
     rows.map((row) => row.campus_event_id).filter((id): id is string => Boolean(id))
   );
+  const studentDiscountPosterIds = await fetchStudentDiscountPosterIds(
+    rows.map((row) => row.student_discount_id).filter((id): id is string => Boolean(id))
+  );
 
   const conversationIds = rows.map((row) => row.id);
   const otherParticipantIds = rows.flatMap((row) =>
@@ -554,6 +591,11 @@ export async function getMyConversations(userId: string): Promise<{
           row.campus_events?.posted_by ??
           null
         : null,
+      studentDiscountPosterId: row.student_discount_id
+        ? studentDiscountPosterIds.get(row.student_discount_id) ??
+          row.student_discounts?.posted_by ??
+          null
+        : null,
     };
     const lastReadAt = getLastReadAtForUser(row, userId, readContext);
     const unreadCount = countUnreadMessagesInThread(
@@ -570,6 +612,7 @@ export async function getMyConversations(userId: string): Promise<{
       lostFoundTitle: lostFoundDisplayTitle(row),
       campusJobTitle: campusJobDisplayTitle(row),
       campusEventTitle: campusEventDisplayTitle(row),
+      studentDiscountTitle: studentDiscountDisplayTitle(row),
       lastMessage: latest?.body ?? null,
       unreadCount,
     });
@@ -646,6 +689,7 @@ export async function getConversation(
     lostFoundTitle: lostFoundDisplayTitle(row),
     campusJobTitle: campusJobDisplayTitle(row),
     campusEventTitle: campusEventDisplayTitle(row),
+    studentDiscountTitle: studentDiscountDisplayTitle(row),
     lastMessage: latest?.body ?? null,
     unreadCount,
   });
@@ -1101,6 +1145,83 @@ export async function getOrCreateCampusEventConversation(
         .eq("campus_event_id", eventId)
         .eq("created_by", requesterUserId)
         .contains("participant_ids", [requesterUserId, organizerId])
+        .maybeSingle();
+      if (retry?.id) return { conversationId: retry.id as string };
+    }
+    return { conversationId: null, error: mapSupabaseError(createError) };
+  }
+
+  return { conversationId: created.id as string };
+}
+
+export async function getOrCreateStudentDiscountConversation(
+  discountId: string,
+  requesterUserId: string
+): Promise<{ conversationId: string | null; error?: string }> {
+  const client = getSupabaseBrowserClient();
+  if (!client) {
+    return { conversationId: null, error: "Supabase is not configured." };
+  }
+
+  const { data: studentDiscount, error: discountError } = await client
+    .from("student_discounts")
+    .select("id, posted_by, status, title")
+    .eq("id", discountId)
+    .maybeSingle();
+
+  if (discountError) {
+    return { conversationId: null, error: mapSupabaseError(discountError) };
+  }
+
+  if (!studentDiscount || studentDiscount.status !== "active") {
+    return { conversationId: null, error: "This discount is no longer available." };
+  }
+
+  const posterId = studentDiscount.posted_by as string;
+  if (posterId === requesterUserId) {
+    return {
+      conversationId: null,
+      error: "You cannot message yourself about your own discount.",
+    };
+  }
+
+  const { data: existing, error: existingError } = await client
+    .from("conversations")
+    .select("id")
+    .eq("student_discount_id", discountId)
+    .eq("created_by", requesterUserId)
+    .contains("participant_ids", [requesterUserId, posterId])
+    .maybeSingle();
+
+  if (existingError) {
+    return { conversationId: null, error: mapSupabaseError(existingError) };
+  }
+
+  if (existing?.id) {
+    return { conversationId: existing.id as string };
+  }
+
+  const now = new Date().toISOString();
+  const { data: created, error: createError } = await client
+    .from("conversations")
+    .insert({
+      student_discount_id: discountId,
+      context_type: "student_discount",
+      created_by: requesterUserId,
+      participant_ids: [requesterUserId, posterId],
+      last_message_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (createError || !created) {
+    if (createError?.code === "23505") {
+      const { data: retry } = await client
+        .from("conversations")
+        .select("id")
+        .eq("student_discount_id", discountId)
+        .eq("created_by", requesterUserId)
+        .contains("participant_ids", [requesterUserId, posterId])
         .maybeSingle();
       if (retry?.id) return { conversationId: retry.id as string };
     }

@@ -4,6 +4,7 @@ import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 import { usesSupabaseHousing } from "@/lib/housing-mode";
 import { usesSupabaseJobs } from "@/lib/jobs-mode";
 import { usesSupabaseEvents } from "@/lib/events-mode";
+import { usesSupabaseDiscounts } from "@/lib/discounts-mode";
 import { usesSupabaseLostFound } from "@/lib/lost-found-mode";
 import { usesSupabaseTutoring } from "@/lib/tutoring-mode";
 import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
@@ -226,6 +227,28 @@ const STATUS_ROWS: StatusRow[] = [
     detail: usesSupabaseMessaging()
       ? "campus_event conversations"
       : "demo preview via msg-7",
+  },
+  {
+    label: "Supabase Student Discounts",
+    status: usesSupabaseDiscounts() ? "ready" : "not-connected",
+    detail: usesSupabaseDiscounts() ? "student_discounts table" : "demo catalog",
+  },
+  {
+    label: "Student Discount Posting",
+    status: usesSupabaseDiscounts() ? "ready" : "not-connected",
+    detail: usesSupabaseDiscounts() ? "create/edit/expire/delete" : "demo preview only",
+  },
+  {
+    label: "Student Discount Reports",
+    status: isModerationRealtimeMode() ? "ready" : "not-connected",
+    detail: isModerationRealtimeMode() ? "student_discount target type" : "demo preview",
+  },
+  {
+    label: "Student Discount Poster Messaging",
+    status: usesSupabaseMessaging() ? "ready" : "not-connected",
+    detail: usesSupabaseMessaging()
+      ? "student_discount conversations"
+      : "demo preview via msg-8",
   },
   { label: "AI API", status: "not-connected" },
 ];

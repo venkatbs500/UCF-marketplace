@@ -726,6 +726,81 @@ export const QA_CHECKLIST: QACheckSection[] = [
     ],
   },
   {
+    id: "discounts-phase-1",
+    title: "Student Discounts Phase 1",
+    description: "Supabase-backed student discounts in real product mode.",
+    items: [
+      {
+        id: "discounts-browse",
+        label: "Browse student discounts",
+        steps: ["Visit /discounts in real mode"],
+        expected:
+          "Active non-expired discounts from Supabase with category, search, online/local, and expiring-soon filters. Honest empty state when none exist.",
+        status: "manual",
+      },
+      {
+        id: "discounts-create",
+        label: "Post a discount",
+        steps: ["Sign in", "Visit /discounts/new", "Fill form and submit"],
+        expected: "Row in student_discounts. Redirect to /discounts/[id].",
+        status: "manual",
+      },
+      {
+        id: "discounts-detail",
+        label: "Discount detail page",
+        steps: ["Open /discounts/[id] for an active discount"],
+        expected:
+          "Title, business, offer, promo code, redemption URL with safety copy, expiry, instructions. Message poster for non-owners.",
+        status: "manual",
+      },
+      {
+        id: "discounts-owner",
+        label: "Owner controls",
+        steps: ["Open your own discount"],
+        expected:
+          "Your discount badge, edit, mark expired, delete. No report or message-self buttons.",
+        status: "manual",
+      },
+      {
+        id: "discounts-message",
+        label: "Message poster",
+        steps: ["Sign in", "Open another user's discount", "Click Message poster"],
+        expected:
+          "Creates student_discount conversation. /messages shows Discounts context with link back.",
+        status: "manual",
+      },
+      {
+        id: "discounts-report",
+        label: "Report discount",
+        steps: ["Report another user's discount"],
+        expected: "Report saved with target_type student_discount. Visible in admin dashboard.",
+        status: "manual",
+      },
+      {
+        id: "discounts-admin-remove",
+        label: "Admin remove discount",
+        steps: ["As admin, open discount report", "Remove discount"],
+        expected: "Discount status set to removed. Hidden from public browse.",
+        status: "manual",
+      },
+    ],
+  },
+  {
+    id: "discounts-actions",
+    title: "Discounts Actions (Demo)",
+    description: "Demo-mode discounts browse and protected actions.",
+    items: [
+      {
+        id: "discount-contact",
+        label: "Message poster from detail",
+        steps: ["Visit /discounts", "Open a discount card", "Click Message poster"],
+        expected:
+          "Signed out → /sign-in. Signed in → demo or Supabase conversation. External links show safety copy.",
+        status: "manual",
+      },
+    ],
+  },
+  {
     id: "mobile-navigation",
     title: "Mobile Navigation",
     description: "Bottom nav behavior on small screens.",
@@ -880,6 +955,14 @@ export const QA_CHECKLIST: QACheckSection[] = [
         steps: ["Run npm run e2e — events.spec.ts"],
         expected:
           "Browse loads, post CTA auth guard, Message organizer flow, demo detail, invalid id not-found pass.",
+        status: "automated",
+      },
+      {
+        id: "e2e-discounts",
+        label: "Discounts E2E",
+        steps: ["Run npm run e2e — discounts.spec.ts"],
+        expected:
+          "Browse loads, post CTA auth guard, Message poster flow, demo detail, invalid id not-found pass.",
         status: "automated",
       },
     ],
@@ -1079,7 +1162,8 @@ export const QA_CHECKLIST: QACheckSection[] = [
         id: "dh-discounts-ai",
         label: "Real mode discounts and AI are honest",
         steps: ["Visit /discounts and /ai in real mode"],
-        expected: "Coming soon empty states. No fake businesses or AI usage counts.",
+        expected:
+          "Discounts shows honest empty state with post CTA. No fake verified badges or businesses. AI shows coming soon.",
         status: "manual",
       },
       {
@@ -1131,6 +1215,14 @@ export const QA_CHECKLIST: QACheckSection[] = [
         steps: ["Visit /events in real mode"],
         expected:
           "No mock event cards, attendee counts, or RSVP buttons. Honest empty state with post CTA.",
+        status: "manual",
+      },
+      {
+        id: "dh-discounts-real",
+        label: "Real mode discounts has no fake listings",
+        steps: ["Visit /discounts in real mode"],
+        expected:
+          "No mock discount cards or verified badges. Honest empty state with post CTA.",
         status: "manual",
       },
       {
