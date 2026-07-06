@@ -34,6 +34,9 @@ const optionalRoutes = [
   "housing/new/page.tsx",
   "housing/[housingId]/page.tsx",
   "housing/[housingId]/edit/page.tsx",
+  "tutoring/new/page.tsx",
+  "tutoring/[tutorId]/page.tsx",
+  "tutoring/[tutorId]/edit/page.tsx",
   "sell/preview/page.tsx",
   "dev/error-demo/page.tsx",
 ];

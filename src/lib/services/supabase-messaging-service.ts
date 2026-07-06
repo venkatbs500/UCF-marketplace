@@ -60,15 +60,23 @@ type BuyerSellerIds = {
 };
 
 const CONVERSATION_SELECT =
-  "*, listings(id, title, status, seller_id), housing_posts(id, title, status, user_id)";
+  "*, listings(id, title, status, seller_id), housing_posts(id, title, status, user_id), tutoring_profiles(id, display_name, status, user_id, subjects)";
 
 function resolveBuyerSellerIds(
   row: ConversationRow,
   options?: {
     listingSellerId?: string | null;
     housingPosterId?: string | null;
+    tutorOwnerId?: string | null;
   }
 ): BuyerSellerIds {
+  if (row.tutor_profile_id && options?.tutorOwnerId) {
+    return {
+      buyerId: row.created_by,
+      sellerId: options.tutorOwnerId,
+    };
+  }
+
   if (row.housing_post_id && options?.housingPosterId) {
     return {
       buyerId: row.created_by,
@@ -97,6 +105,7 @@ function getLastReadAtForUser(
   options?: {
     listingSellerId?: string | null;
     housingPosterId?: string | null;
+    tutorOwnerId?: string | null;
   }
 ): string | null {
   const { buyerId, sellerId } = resolveBuyerSellerIds(row, options);
@@ -110,10 +119,12 @@ function getParticipantReadContext(
 ): {
   listingSellerId: string | null;
   housingPosterId: string | null;
+  tutorOwnerId: string | null;
 } {
   return {
     listingSellerId: row.listings?.seller_id ?? null,
     housingPosterId: row.housing_posts?.user_id ?? null,
+    tutorOwnerId: row.tutoring_profiles?.user_id ?? null,
   };
 }
 
@@ -164,6 +175,34 @@ async function fetchHousingPosterIds(
     map.set(row.id as string, row.user_id as string);
   }
   return map;
+}
+
+async function fetchTutorOwnerIds(
+  tutorProfileIds: string[]
+): Promise<Map<string, string>> {
+  const client = getSupabaseBrowserClient();
+  const map = new Map<string, string>();
+  if (!client || tutorProfileIds.length === 0) return map;
+
+  const { data } = await client
+    .from("tutoring_profiles")
+    .select("id, user_id")
+    .in("id", [...new Set(tutorProfileIds)]);
+
+  for (const row of data ?? []) {
+    map.set(row.id as string, row.user_id as string);
+  }
+  return map;
+}
+
+function tutorDisplayTitle(row: ConversationWithListingRow): string | null {
+  if (!row.tutor_profile_id) return null;
+  if (row.tutoring_profiles?.display_name?.trim()) {
+    return row.tutoring_profiles.display_name.trim();
+  }
+  const firstSubject = row.tutoring_profiles?.subjects?.[0];
+  if (firstSubject) return firstSubject;
+  return "Tutor profile";
 }
 
 async function countUnreadMessagesForConversation(
@@ -350,6 +389,9 @@ export async function getMyConversations(userId: string): Promise<{
   const housingPosterIds = await fetchHousingPosterIds(
     rows.map((row) => row.housing_post_id).filter((id): id is string => Boolean(id))
   );
+  const tutorOwnerIds = await fetchTutorOwnerIds(
+    rows.map((row) => row.tutor_profile_id).filter((id): id is string => Boolean(id))
+  );
 
   const conversationIds = rows.map((row) => row.id);
   const otherParticipantIds = rows.flatMap((row) =>
@@ -387,6 +429,9 @@ export async function getMyConversations(userId: string): Promise<{
       housingPosterId: row.housing_post_id
         ? housingPosterIds.get(row.housing_post_id) ?? row.housing_posts?.user_id ?? null
         : null,
+      tutorOwnerId: row.tutor_profile_id
+        ? tutorOwnerIds.get(row.tutor_profile_id) ?? row.tutoring_profiles?.user_id ?? null
+        : null,
     };
     const lastReadAt = getLastReadAtForUser(row, userId, readContext);
     const unreadCount = countUnreadMessagesInThread(
@@ -399,6 +444,7 @@ export async function getMyConversations(userId: string): Promise<{
       otherParticipant: mapProfileToParticipant(otherProfile, otherId),
       listingTitle: row.listings?.title ?? null,
       housingTitle: row.housing_posts?.title ?? null,
+      tutorTitle: tutorDisplayTitle(row),
       lastMessage: latest?.body ?? null,
       unreadCount,
     });
@@ -471,6 +517,7 @@ export async function getConversation(
     otherParticipant: mapProfileToParticipant(profiles.get(otherId), otherId),
     listingTitle: row.listings?.title ?? null,
     housingTitle: row.housing_posts?.title ?? null,
+    tutorTitle: tutorDisplayTitle(row),
     lastMessage: latest?.body ?? null,
     unreadCount,
   });
@@ -618,6 +665,83 @@ export async function getOrCreateHousingConversation(
         .eq("housing_post_id", housingPostId)
         .eq("created_by", buyerId)
         .contains("participant_ids", [buyerId, posterId])
+        .maybeSingle();
+      if (retry?.id) return { conversationId: retry.id as string };
+    }
+    return { conversationId: null, error: mapSupabaseError(createError) };
+  }
+
+  return { conversationId: created.id as string };
+}
+
+export async function getOrCreateTutorConversation(
+  tutorProfileId: string,
+  buyerId: string
+): Promise<{ conversationId: string | null; error?: string }> {
+  const client = getSupabaseBrowserClient();
+  if (!client) {
+    return { conversationId: null, error: "Supabase is not configured." };
+  }
+
+  const { data: tutorProfile, error: tutorError } = await client
+    .from("tutoring_profiles")
+    .select("id, user_id, status, display_name")
+    .eq("id", tutorProfileId)
+    .maybeSingle();
+
+  if (tutorError) {
+    return { conversationId: null, error: mapSupabaseError(tutorError) };
+  }
+
+  if (!tutorProfile || tutorProfile.status !== "active") {
+    return { conversationId: null, error: "This tutor profile is no longer available." };
+  }
+
+  const tutorUserId = tutorProfile.user_id as string;
+  if (tutorUserId === buyerId) {
+    return {
+      conversationId: null,
+      error: "You cannot message yourself about your own tutor profile.",
+    };
+  }
+
+  const { data: existing, error: existingError } = await client
+    .from("conversations")
+    .select("id")
+    .eq("tutor_profile_id", tutorProfileId)
+    .eq("created_by", buyerId)
+    .contains("participant_ids", [buyerId, tutorUserId])
+    .maybeSingle();
+
+  if (existingError) {
+    return { conversationId: null, error: mapSupabaseError(existingError) };
+  }
+
+  if (existing?.id) {
+    return { conversationId: existing.id as string };
+  }
+
+  const now = new Date().toISOString();
+  const { data: created, error: createError } = await client
+    .from("conversations")
+    .insert({
+      tutor_profile_id: tutorProfileId,
+      context_type: "tutor_profile",
+      created_by: buyerId,
+      participant_ids: [buyerId, tutorUserId],
+      last_message_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (createError || !created) {
+    if (createError?.code === "23505") {
+      const { data: retry } = await client
+        .from("conversations")
+        .select("id")
+        .eq("tutor_profile_id", tutorProfileId)
+        .eq("created_by", buyerId)
+        .contains("participant_ids", [buyerId, tutorUserId])
         .maybeSingle();
       if (retry?.id) return { conversationId: retry.id as string };
     }

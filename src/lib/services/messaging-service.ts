@@ -6,6 +6,7 @@ import {
   getMyConversations,
   getOrCreateHousingConversation,
   getOrCreateListingConversation,
+  getOrCreateTutorConversation,
   getUnreadConversationCount,
   getUnreadConversationIds,
   getUnreadSummary,
@@ -31,12 +32,14 @@ export {
 };
 
 export const DEMO_HOUSING_CONVERSATION_ID = "msg-3";
+export const DEMO_TUTOR_CONVERSATION_ID = "msg-2";
 
 export const supabaseMessagingService = {
   getMyConversations,
   getConversation,
   getOrCreateListingConversation,
   getOrCreateHousingConversation,
+  getOrCreateTutorConversation,
   sendMessage,
   getUnreadConversationCount,
   getConversationUnreadCount,
@@ -56,6 +59,13 @@ export async function openDemoHousingConversation(
 ): Promise<{ conversationId: string }> {
   void housingPostId;
   return { conversationId: DEMO_HOUSING_CONVERSATION_ID };
+}
+
+export async function openDemoTutorConversation(
+  tutorProfileId: string
+): Promise<{ conversationId: string }> {
+  void tutorProfileId;
+  return { conversationId: DEMO_TUTOR_CONVERSATION_ID };
 }
 
 export async function fetchMyConversationPreviews(

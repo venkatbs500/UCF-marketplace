@@ -113,6 +113,15 @@ export function AdminDashboard() {
     await runStatusUpdate(report.id, "resolved");
   };
 
+  const runHideTutorProfile = async (report: ReportItem) => {
+    const result = await service.hideTutorProfileForModeration(report.targetId);
+    if (!result.success) {
+      setError(result.error ?? "We could not remove this tutor profile.");
+      return;
+    }
+    await runStatusUpdate(report.id, "resolved");
+  };
+
   return (
     <>
       <div className="mb-4 flex items-center gap-2">
@@ -279,6 +288,23 @@ export function AdminDashboard() {
                       }
                     >
                       Remove housing post
+                    </Button>
+                  )}
+                  {report.targetType === "tutor_profile" && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() =>
+                        void askConfirm({
+                          title: "Remove tutor profile?",
+                          description:
+                            "This will set the tutor profile status to removed and hide it from browse.",
+                          onConfirm: () => void runHideTutorProfile(report),
+                          destructive: true,
+                        })
+                      }
+                    >
+                      Remove tutor profile
                     </Button>
                   )}
                 </div>

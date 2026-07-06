@@ -38,6 +38,13 @@ export type ConversationWithListingRow = ConversationRow & {
     status: string;
     user_id?: string;
   } | null;
+  tutoring_profiles?: {
+    id: string;
+    display_name: string | null;
+    status: string;
+    user_id?: string;
+    subjects?: string[] | null;
+  } | null;
 };
 
 export type ConversationContext = {
@@ -53,8 +60,19 @@ export function getConversationContext(
   options?: {
     listingTitle?: string | null;
     housingTitle?: string | null;
+    tutorTitle?: string | null;
   }
 ): ConversationContext {
+  if (row.tutor_profile_id) {
+    return {
+      contextType: "tutor_profile",
+      contextTitle: options?.tutorTitle ?? null,
+      contextId: row.tutor_profile_id,
+      contextHref: `/tutoring/${row.tutor_profile_id}`,
+      contextLabel: "Tutoring",
+    };
+  }
+
   if (row.housing_post_id) {
     return {
       contextType: "housing_post",
@@ -72,16 +90,6 @@ export function getConversationContext(
       contextId: row.listing_id,
       contextHref: `/marketplace/${row.listing_id}`,
       contextLabel: "Marketplace",
-    };
-  }
-
-  if (row.tutor_profile_id) {
-    return {
-      contextType: "tutor_profile",
-      contextTitle: null,
-      contextId: row.tutor_profile_id,
-      contextHref: "/tutoring",
-      contextLabel: "Tutoring",
     };
   }
 
@@ -180,6 +188,7 @@ export function mapConversationRowToPreview(
     otherParticipant: ConversationParticipant;
     listingTitle?: string | null;
     housingTitle?: string | null;
+    tutorTitle?: string | null;
     lastMessage?: string | null;
     unreadCount?: number;
   }
@@ -190,6 +199,7 @@ export function mapConversationRowToPreview(
   const context = getConversationContext(row, {
     listingTitle: options.listingTitle,
     housingTitle: options.housingTitle,
+    tutorTitle: options.tutorTitle,
   });
 
   return {

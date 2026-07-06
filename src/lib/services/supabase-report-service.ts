@@ -171,6 +171,19 @@ export async function hideHousingPostForModeration(
   return { success: true };
 }
 
+export async function hideTutorProfileForModeration(
+  tutorProfileId: string
+): Promise<{ success: boolean; error?: string }> {
+  const client = getSupabaseBrowserClient();
+  if (!client) return { success: false, error: "Supabase is not configured." };
+  const { error } = await client
+    .from("tutoring_profiles")
+    .update({ status: "removed" })
+    .eq("id", tutorProfileId);
+  if (error) return { success: false, error: mapSupabaseError(error) };
+  return { success: true };
+}
+
 export const supabaseReportService = {
   createReport,
   getMyReports,
@@ -179,4 +192,5 @@ export const supabaseReportService = {
   hideListingForModeration,
   hideMessageForModeration,
   hideHousingPostForModeration,
+  hideTutorProfileForModeration,
 };

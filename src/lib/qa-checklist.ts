@@ -427,15 +427,74 @@ export const QA_CHECKLIST: QACheckSection[] = [
     ],
   },
   {
+    id: "tutoring-phase-1",
+    title: "Tutoring Phase 1",
+    description: "Supabase-backed tutor profiles in real product mode.",
+    items: [
+      {
+        id: "tutoring-browse",
+        label: "Browse tutor profiles",
+        steps: ["Visit /tutoring in real mode"],
+        expected:
+          "Active tutor profiles from Supabase with subject, rate, and format filters. Honest empty state when none exist.",
+        status: "manual",
+      },
+      {
+        id: "tutoring-create",
+        label: "Become a tutor",
+        steps: ["Sign in", "Visit /tutoring/new", "Fill form and submit"],
+        expected: "Row in tutoring_profiles. Redirect to /tutoring/[id]. One profile per user.",
+        status: "manual",
+      },
+      {
+        id: "tutoring-detail",
+        label: "Tutor detail page",
+        steps: ["Open /tutoring/[id] for an active profile"],
+        expected:
+          "Subjects, rate, format, bio, availability. Message tutor opens conversation. No fake ratings unless review_count > 0.",
+        status: "manual",
+      },
+      {
+        id: "tutoring-owner",
+        label: "Owner controls",
+        steps: ["Open your own tutor profile"],
+        expected: "Your profile badge, edit, mark inactive, delete. No report button on own profile.",
+        status: "manual",
+      },
+      {
+        id: "tutoring-message",
+        label: "Message tutor",
+        steps: ["Sign in", "Open another tutor profile", "Click Message tutor"],
+        expected:
+          "Creates tutor_profile conversation. /messages shows Tutoring context with link back.",
+        status: "manual",
+      },
+      {
+        id: "tutoring-report",
+        label: "Report tutor profile",
+        steps: ["Report another user's tutor profile"],
+        expected: "Report saved with target_type tutor_profile. Visible in admin dashboard.",
+        status: "manual",
+      },
+      {
+        id: "tutoring-admin-remove",
+        label: "Admin remove tutor profile",
+        steps: ["As admin, open tutor report", "Remove tutor profile"],
+        expected: "Profile status set to removed. Hidden from public browse.",
+        status: "manual",
+      },
+    ],
+  },
+  {
     id: "tutoring-actions",
-    title: "Tutoring Actions",
-    description: "Protected tutor booking.",
+    title: "Tutoring Actions (Demo)",
+    description: "Demo-mode tutoring browse and protected actions.",
     items: [
       {
         id: "tutor-book",
-        label: "Book session",
-        steps: ["Visit /tutoring", "Click Book Session"],
-        expected: "Signed out → /sign-in. Onboarded → honest coming-soon message.",
+        label: "Message tutor from detail",
+        steps: ["Visit /tutoring", "Open a tutor card", "Click Message tutor"],
+        expected: "Signed out → /sign-in. Signed in → demo or Supabase conversation. Booking/payments not offered.",
         status: "manual",
       },
     ],
@@ -591,6 +650,14 @@ export const QA_CHECKLIST: QACheckSection[] = [
         steps: ["Run npm run e2e — housing.spec.ts"],
         expected:
           "Browse loads, post CTA auth guard, Message poster flow, demo detail, invalid id not-found pass.",
+        status: "automated",
+      },
+      {
+        id: "e2e-tutoring",
+        label: "Tutoring E2E",
+        steps: ["Run npm run e2e — tutoring.spec.ts"],
+        expected:
+          "Browse loads, become tutor CTA auth guard, Message tutor flow, demo detail, invalid id not-found pass.",
         status: "automated",
       },
     ],

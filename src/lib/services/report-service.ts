@@ -24,6 +24,9 @@ export type ReportService = {
   hideHousingPostForModeration: (
     housingPostId: string
   ) => Promise<{ success: boolean; error?: string }>;
+  hideTutorProfileForModeration: (
+    tutorProfileId: string
+  ) => Promise<{ success: boolean; error?: string }>;
 };
 
 function isSupabaseModerationMode(): boolean {
@@ -50,6 +53,9 @@ const mockReportService: ReportService = {
     return { success: true };
   },
   async hideHousingPostForModeration() {
+    return { success: true };
+  },
+  async hideTutorProfileForModeration() {
     return { success: true };
   },
 };

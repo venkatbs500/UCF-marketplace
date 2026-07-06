@@ -3,7 +3,8 @@ export type ReportTargetType =
   | "message"
   | "user"
   | "conversation"
-  | "housing_post";
+  | "housing_post"
+  | "tutor_profile";
 export type ReportReason =
   | "spam"
   | "scam"

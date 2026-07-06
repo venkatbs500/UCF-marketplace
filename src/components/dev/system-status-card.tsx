@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 import { usesSupabaseHousing } from "@/lib/housing-mode";
+import { usesSupabaseTutoring } from "@/lib/tutoring-mode";
 import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
 import { usesSupabaseSavedListings } from "@/lib/saved-listings-mode";
 import { getProductMode, isDemoDataEnabled, isRealDataMode } from "@/lib/product-mode";
@@ -129,6 +130,28 @@ const STATUS_ROWS: StatusRow[] = [
     detail: usesSupabaseMessaging()
       ? "shared realtime + unread"
       : "demo unread badges",
+  },
+  {
+    label: "Supabase Tutor Profiles",
+    status: usesSupabaseTutoring() ? "ready" : "not-connected",
+    detail: usesSupabaseTutoring() ? "tutoring_profiles table" : "demo catalog",
+  },
+  {
+    label: "Tutor Profile Create/Edit",
+    status: usesSupabaseTutoring() ? "ready" : "not-connected",
+    detail: usesSupabaseTutoring() ? "one profile per user" : "demo preview only",
+  },
+  {
+    label: "Tutor Reports",
+    status: isModerationRealtimeMode() ? "ready" : "not-connected",
+    detail: isModerationRealtimeMode() ? "tutor_profile target type" : "demo preview",
+  },
+  {
+    label: "Tutor Contact Messaging",
+    status: usesSupabaseMessaging() ? "ready" : "not-connected",
+    detail: usesSupabaseMessaging()
+      ? "tutor_profile conversations"
+      : "demo preview via msg-2",
   },
   { label: "AI API", status: "not-connected" },
 ];
