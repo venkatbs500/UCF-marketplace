@@ -59,7 +59,15 @@ export type CampusEventFilters = {
   eventType?: CampusEventType | "all";
   location?: string;
   upcomingOnly?: boolean;
+  sort?: CampusEventSortOption;
 };
+
+export type CampusEventSortOption = "upcoming" | "newest";
+
+export const CAMPUS_EVENT_SORT_OPTIONS: Array<{ id: CampusEventSortOption; label: string }> = [
+  { id: "upcoming", label: "Upcoming soonest" },
+  { id: "newest", label: "Newest" },
+];
 
 export type CreateCampusEventInput = {
   postedBy: string;
@@ -196,6 +204,44 @@ export function filterCampusEvents(
       .toLowerCase();
     return haystack.includes(query);
   });
+}
+
+export function sortCampusEvents(
+  events: CampusEventRecord[],
+  sort: CampusEventSortOption = "upcoming"
+): CampusEventRecord[] {
+  const copy = [...events];
+  switch (sort) {
+    case "newest":
+      return copy.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    case "upcoming":
+    default:
+      return copy.sort((a, b) => {
+        const aDate = a.eventDate ?? "9999-12-31";
+        const bDate = b.eventDate ?? "9999-12-31";
+        if (aDate !== bDate) return aDate.localeCompare(bDate);
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }
+}
+
+export function filterAndSortCampusEvents(
+  events: CampusEventRecord[],
+  filters: CampusEventFilters
+): CampusEventRecord[] {
+  const { sort, ...rest } = filters;
+  return sortCampusEvents(filterCampusEvents(events, rest), sort ?? "upcoming");
+}
+
+export function isCampusEventFilterActive(filters: CampusEventFilters): boolean {
+  return Boolean(
+    filters.query?.trim() ||
+      (filters.eventType && filters.eventType !== "all") ||
+      filters.location?.trim() ||
+      filters.upcomingOnly === false
+  );
 }
 
 export function formatEventTimeRange(event: CampusEventRecord): string {

@@ -55,7 +55,17 @@ export type HousingPostFilters = {
   minRent?: number;
   maxRent?: number;
   moveInBefore?: string;
+  sort?: HousingSortOption;
 };
+
+export type HousingSortOption = "newest" | "rent-asc" | "rent-desc" | "available-soonest";
+
+export const HOUSING_SORT_OPTIONS: Array<{ id: HousingSortOption; label: string }> = [
+  { id: "newest", label: "Newest" },
+  { id: "rent-asc", label: "Rent: Low to High" },
+  { id: "rent-desc", label: "Rent: High to Low" },
+  { id: "available-soonest", label: "Available soonest" },
+];
 
 export type CreateHousingPostInput = {
   userId: string;
@@ -172,4 +182,46 @@ export function filterHousingPosts(
       .toLowerCase();
     return haystack.includes(query);
   });
+}
+
+export function sortHousingPosts(
+  posts: HousingPostItem[],
+  sort: HousingSortOption = "newest"
+): HousingPostItem[] {
+  const copy = [...posts];
+  switch (sort) {
+    case "rent-asc":
+      return copy.sort((a, b) => (a.rent ?? Infinity) - (b.rent ?? Infinity));
+    case "rent-desc":
+      return copy.sort((a, b) => (b.rent ?? 0) - (a.rent ?? 0));
+    case "available-soonest":
+      return copy.sort((a, b) => {
+        const aDate = a.moveInDate ?? "9999-12-31";
+        const bDate = b.moveInDate ?? "9999-12-31";
+        return aDate.localeCompare(bDate);
+      });
+    case "newest":
+    default:
+      return copy.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  }
+}
+
+export function filterAndSortHousingPosts(
+  posts: HousingPostItem[],
+  filters: HousingPostFilters
+): HousingPostItem[] {
+  const { sort, ...rest } = filters;
+  return sortHousingPosts(filterHousingPosts(posts, rest), sort ?? "newest");
+}
+
+export function isHousingFilterActive(filters: HousingPostFilters): boolean {
+  return Boolean(
+    filters.query?.trim() ||
+      (filters.type && filters.type !== "all") ||
+      filters.minRent != null ||
+      filters.maxRent != null ||
+      filters.moveInBefore
+  );
 }

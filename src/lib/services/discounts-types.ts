@@ -64,7 +64,15 @@ export type StudentDiscountFilters = {
   onlineOnly?: boolean;
   localOnly?: boolean;
   expiringSoon?: boolean;
+  sort?: StudentDiscountSortOption;
 };
+
+export type StudentDiscountSortOption = "newest" | "expiring-soonest";
+
+export const STUDENT_DISCOUNT_SORT_OPTIONS: Array<{ id: StudentDiscountSortOption; label: string }> = [
+  { id: "newest", label: "Newest" },
+  { id: "expiring-soonest", label: "Expiring soonest" },
+];
 
 export type CreateStudentDiscountInput = {
   postedBy: string;
@@ -220,4 +228,43 @@ export function filterStudentDiscounts(
       .toLowerCase();
     return haystack.includes(query);
   });
+}
+
+export function sortStudentDiscounts(
+  discounts: StudentDiscountRecord[],
+  sort: StudentDiscountSortOption = "newest"
+): StudentDiscountRecord[] {
+  const copy = [...discounts];
+  switch (sort) {
+    case "expiring-soonest":
+      return copy.sort((a, b) => {
+        const aExpires = a.expiresAt ? new Date(a.expiresAt).getTime() : Number.MAX_SAFE_INTEGER;
+        const bExpires = b.expiresAt ? new Date(b.expiresAt).getTime() : Number.MAX_SAFE_INTEGER;
+        if (aExpires !== bExpires) return aExpires - bExpires;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    case "newest":
+    default:
+      return copy.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  }
+}
+
+export function filterAndSortStudentDiscounts(
+  discounts: StudentDiscountRecord[],
+  filters: StudentDiscountFilters
+): StudentDiscountRecord[] {
+  const { sort, ...rest } = filters;
+  return sortStudentDiscounts(filterStudentDiscounts(discounts, rest), sort ?? "newest");
+}
+
+export function isStudentDiscountFilterActive(filters: StudentDiscountFilters): boolean {
+  return Boolean(
+    filters.query?.trim() ||
+      (filters.discountType && filters.discountType !== "all") ||
+      filters.onlineOnly ||
+      filters.localOnly ||
+      filters.expiringSoon
+  );
 }

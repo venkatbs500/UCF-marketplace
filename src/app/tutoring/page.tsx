@@ -8,11 +8,14 @@ import { AppShell } from "@/components/layout/app-shell";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SearchBar } from "@/components/ui/search-bar";
 import { FilterChips } from "@/components/ui/filter-chips";
-import { EmptyState } from "@/components/ui/empty-state";
 import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
 import { Button } from "@/components/ui/button";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { TutorCard } from "@/components/tutoring/tutor-card";
+import { BrowseResultBar } from "@/components/browse/browse-result-bar";
+import { BrowseEmptyState } from "@/components/browse/browse-empty-state";
+import { BrowseSortSelect } from "@/components/browse/browse-sort-select";
+import { useBrowseUrlState } from "@/hooks/use-browse-url-state";
 import { tutors } from "@/lib/mock-data";
 import { TUTORING_SUBJECTS } from "@/lib/constants";
 import { isDemoDataEnabledWithOverride } from "@/lib/product-mode";
@@ -24,11 +27,12 @@ import {
   mapMockTutorProfileToItem,
 } from "@/lib/services/tutoring-service";
 import {
-  filterTutorProfiles,
+  filterAndSortTutorProfiles,
   TUTORING_FORMAT_OPTIONS,
-  type TutorProfileFilters,
+  TUTOR_SORT_OPTIONS,
   type TutorProfileItem,
   type TutoringFormat,
+  type TutorSortOption,
 } from "@/lib/services/tutoring-types";
 
 const SUBJECT_OPTIONS = TUTORING_SUBJECTS.map((subject) => ({
@@ -41,15 +45,148 @@ const FORMAT_FILTER_OPTIONS = [
   ...TUTORING_FORMAT_OPTIONS.map((option) => ({ id: option.value, label: option.label })),
 ];
 
+type TutoringBrowseUiState = {
+  query: string;
+  format: TutoringFormat | "all";
+  minRate: string;
+  maxRate: string;
+  subject: string;
+  sort: TutorSortOption;
+};
+
+const DEFAULT_TUTORING_BROWSE: TutoringBrowseUiState = {
+  query: "",
+  format: "all",
+  minRate: "",
+  maxRate: "",
+  subject: "all",
+  sort: "newest",
+};
+
+function parseTutoringParams(params: URLSearchParams): Partial<TutoringBrowseUiState> {
+  return {
+    query: params.get("search") ?? "",
+    format: (params.get("format") as TutoringFormat | "all") ?? "all",
+    minRate: params.get("minRate") ?? "",
+    maxRate: params.get("maxRate") ?? "",
+    subject: params.get("subject") ?? "all",
+    sort: (params.get("sort") as TutorSortOption) ?? "newest",
+  };
+}
+
+function serializeTutoringState(state: TutoringBrowseUiState) {
+  return {
+    search: state.query,
+    format: state.format,
+    minRate: state.minRate,
+    maxRate: state.maxRate,
+    subject: state.subject,
+    sort: state.sort,
+  };
+}
+
+function tutoringUiToFilters(state: TutoringBrowseUiState) {
+  return {
+    query: state.query,
+    format: state.format,
+    minRate: state.minRate.trim() ? Number(state.minRate) : undefined,
+    maxRate: state.maxRate.trim() ? Number(state.maxRate) : undefined,
+    sort: state.sort,
+  };
+}
+
+function isTutoringBrowseActive(state: TutoringBrowseUiState): boolean {
+  return Boolean(
+    state.query.trim() ||
+      state.format !== "all" ||
+      state.minRate.trim() ||
+      state.maxRate.trim() ||
+      state.subject !== "all"
+  );
+}
+
+function TutoringBrowseFilters({
+  state,
+  onChange,
+  showSubjectChips = false,
+}: {
+  state: TutoringBrowseUiState;
+  onChange: (patch: Partial<TutoringBrowseUiState>) => void;
+  showSubjectChips?: boolean;
+}) {
+  return (
+    <div className="mb-4 space-y-3" data-testid="tutoring-browse-filters">
+      <SearchBar
+        placeholder="Search tutors, subjects, or courses..."
+        value={state.query}
+        onChange={(query) => onChange({ query })}
+        ariaLabel="Search tutoring"
+      />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <select
+          value={state.format}
+          onChange={(event) => onChange({ format: event.target.value as TutoringFormat | "all" })}
+          className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
+          aria-label="Tutoring format filter"
+        >
+          {FORMAT_FILTER_OPTIONS.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min="0"
+          placeholder="Min rate"
+          value={state.minRate}
+          onChange={(event) => onChange({ minRate: event.target.value })}
+          className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
+          aria-label="Minimum hourly rate"
+        />
+        <input
+          type="number"
+          min="0"
+          placeholder="Max rate"
+          value={state.maxRate}
+          onChange={(event) => onChange({ maxRate: event.target.value })}
+          className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
+          aria-label="Maximum hourly rate"
+        />
+        <BrowseSortSelect
+          value={state.sort}
+          options={TUTOR_SORT_OPTIONS}
+          onChange={(sort) => onChange({ sort: sort as TutorSortOption })}
+        />
+      </div>
+      {showSubjectChips && (
+        <FilterChips
+          options={SUBJECT_OPTIONS}
+          value={state.subject}
+          onChange={(subject) => onChange({ subject })}
+          allLabel="All Subjects"
+          size="sm"
+        />
+      )}
+    </div>
+  );
+}
+
+function applySubjectFilter(profiles: TutorProfileItem[], subject: string) {
+  if (subject === "all") return profiles;
+  return profiles.filter((profile) => profile.subjects.includes(subject));
+}
+
 function RealTutoringBrowse() {
   const { isAuthenticated } = useAuth();
   const [profiles, setProfiles] = useState<TutorProfileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [format, setFormat] = useState<TutoringFormat | "all">("all");
-  const [minRate, setMinRate] = useState("");
-  const [maxRate, setMaxRate] = useState("");
+  const [browseState, setBrowseState, resetBrowseState] = useBrowseUrlState({
+    defaults: DEFAULT_TUTORING_BROWSE,
+    parse: parseTutoringParams,
+    serialize: serializeTutoringState,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -64,17 +201,12 @@ function RealTutoringBrowse() {
     };
   }, []);
 
-  const filters: TutorProfileFilters = useMemo(
-    () => ({
-      query,
-      format,
-      minRate: minRate.trim() ? Number(minRate) : undefined,
-      maxRate: maxRate.trim() ? Number(maxRate) : undefined,
-    }),
-    [query, format, minRate, maxRate]
-  );
+  const filtered = useMemo(() => {
+    const sorted = filterAndSortTutorProfiles(profiles, tutoringUiToFilters(browseState));
+    return applySubjectFilter(sorted, browseState.subject);
+  }, [profiles, browseState]);
 
-  const filtered = useMemo(() => filterTutorProfiles(profiles, filters), [profiles, filters]);
+  const filtersActive = isTutoringBrowseActive(browseState);
   const becomeHref = isAuthenticated ? "/tutoring/new" : buildSignInUrl("/tutoring/new");
 
   return (
@@ -92,47 +224,14 @@ function RealTutoringBrowse() {
         </Link>
       </div>
 
-      <div className="mb-6 grid gap-3 lg:grid-cols-4">
-        <div className="lg:col-span-2">
-          <SearchBar
-            placeholder="Search tutors, subjects, or courses..."
-            value={query}
-            onChange={setQuery}
-          />
-        </div>
-        <select
-          value={format}
-          onChange={(event) => setFormat(event.target.value as TutoringFormat | "all")}
-          className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
-          aria-label="Tutoring format filter"
-        >
-          {FORMAT_FILTER_OPTIONS.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="number"
-            min="0"
-            placeholder="Min rate"
-            value={minRate}
-            onChange={(event) => setMinRate(event.target.value)}
-            className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
-            aria-label="Minimum hourly rate"
-          />
-          <input
-            type="number"
-            min="0"
-            placeholder="Max rate"
-            value={maxRate}
-            onChange={(event) => setMaxRate(event.target.value)}
-            className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
-            aria-label="Maximum hourly rate"
-          />
-        </div>
-      </div>
+      <TutoringBrowseFilters state={browseState} onChange={setBrowseState} />
+
+      <BrowseResultBar
+        count={filtered.length}
+        singular="tutor"
+        filtersActive={filtersActive}
+        onReset={resetBrowseState}
+      />
 
       {loading && <LoadingSpinner className="min-h-[30vh]" label="Loading tutors..." />}
 
@@ -151,11 +250,19 @@ function RealTutoringBrowse() {
       )}
 
       {!loading && filtered.length === 0 && (
-        <EmptyState
+        <BrowseEmptyState
           icon={BookOpen}
-          title="No tutors yet"
-          description="Be the first to offer tutoring for UCF students."
-          action={
+          totalCount={profiles.length}
+          filteredCount={filtered.length}
+          filtersActive={filtersActive}
+          moduleLabel="tutor"
+          moduleLabelPlural="tutors"
+          emptyAllTitle="No tutors yet"
+          emptyAllDescription="Be the first to offer tutoring for UCF students."
+          emptyFilterTitle="No tutors match your filters"
+          emptyFilterDescription="Try clearing search or changing format or rate filters."
+          onReset={resetBrowseState}
+          createAction={
             <Link href={becomeHref}>
               <Button>Become a tutor</Button>
             </Link>
@@ -170,27 +277,23 @@ function DemoTutoringBrowse() {
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
   const demoEnabled = isDemoDataEnabledWithOverride(searchParams);
-  const [search, setSearch] = useState("");
-  const [subject, setSubject] = useState<string | "all">("all");
+  const [browseState, setBrowseState, resetBrowseState] = useBrowseUrlState({
+    defaults: DEFAULT_TUTORING_BROWSE,
+    parse: parseTutoringParams,
+    serialize: serializeTutoringState,
+  });
 
   const sourceProfiles = useMemo(
     () => (demoEnabled ? tutors.map(mapMockTutorProfileToItem) : []),
     [demoEnabled]
   );
 
-  const filtered = useMemo(
-    () =>
-      sourceProfiles.filter((profile) => {
-        const matchesSearch =
-          !search ||
-          profile.displayName.toLowerCase().includes(search.toLowerCase()) ||
-          profile.subjects.some((s) => s.toLowerCase().includes(search.toLowerCase()));
-        const matchesSubject = subject === "all" || profile.subjects.includes(subject);
-        return matchesSearch && matchesSubject;
-      }),
-    [sourceProfiles, search, subject]
-  );
+  const filtered = useMemo(() => {
+    const sorted = filterAndSortTutorProfiles(sourceProfiles, tutoringUiToFilters(browseState));
+    return applySubjectFilter(sorted, browseState.subject);
+  }, [sourceProfiles, browseState]);
 
+  const filtersActive = isTutoringBrowseActive(browseState);
   const becomeHref = isAuthenticated ? "/tutoring/new" : buildSignInUrl("/tutoring/new");
 
   return (
@@ -211,21 +314,22 @@ function DemoTutoringBrowse() {
         </Link>
       </div>
 
-      <div className="mb-6">
-        <SearchBar
-          placeholder="Search tutors or subjects..."
-          value={search}
-          onChange={setSearch}
+      {demoEnabled && (
+        <TutoringBrowseFilters
+          state={browseState}
+          onChange={setBrowseState}
+          showSubjectChips
         />
-      </div>
+      )}
 
-      <FilterChips
-        options={SUBJECT_OPTIONS}
-        value={subject}
-        onChange={setSubject}
-        allLabel="All Subjects"
-        className="mb-8"
-      />
+      {demoEnabled && (
+        <BrowseResultBar
+          count={filtered.length}
+          singular="tutor"
+          filtersActive={filtersActive}
+          onReset={resetBrowseState}
+        />
+      )}
 
       {filtered.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -234,14 +338,18 @@ function DemoTutoringBrowse() {
           ))}
         </div>
       ) : (
-        <EmptyState
+        <BrowseEmptyState
           icon={BookOpen}
-          title={demoEnabled ? "No tutors match your search" : "No tutors listed yet"}
-          description={
-            demoEnabled
-              ? "Try a different subject or search term."
-              : "Verified students will soon be able to offer tutoring by subject."
-          }
+          totalCount={sourceProfiles.length}
+          filteredCount={filtered.length}
+          filtersActive={filtersActive}
+          moduleLabel="tutor"
+          moduleLabelPlural="tutors"
+          emptyAllTitle="No tutors listed yet"
+          emptyAllDescription="Verified students will soon be able to offer tutoring by subject."
+          emptyFilterTitle="No tutors match your search"
+          emptyFilterDescription="Try a different subject or search term."
+          onReset={resetBrowseState}
         />
       )}
     </>

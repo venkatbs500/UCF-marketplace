@@ -62,7 +62,16 @@ export type CampusJobFilters = {
   jobType?: CampusJobType | "all";
   location?: string;
   remoteOnly?: boolean;
+  sort?: CampusJobSortOption;
 };
+
+export type CampusJobSortOption = "newest" | "remote-first" | "job-type";
+
+export const CAMPUS_JOB_SORT_OPTIONS: Array<{ id: CampusJobSortOption; label: string }> = [
+  { id: "newest", label: "Newest" },
+  { id: "remote-first", label: "Remote first" },
+  { id: "job-type", label: "Job type" },
+];
 
 export type CreateCampusJobInput = {
   postedBy: string;
@@ -191,4 +200,48 @@ export function filterCampusJobs(
       .toLowerCase();
     return haystack.includes(query);
   });
+}
+
+export function sortCampusJobs(
+  jobs: CampusJobRecord[],
+  sort: CampusJobSortOption = "newest"
+): CampusJobRecord[] {
+  const copy = [...jobs];
+  switch (sort) {
+    case "remote-first":
+      return copy.sort((a, b) => {
+        if (a.isRemote === b.isRemote) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        return a.isRemote ? -1 : 1;
+      });
+    case "job-type":
+      return copy.sort((a, b) => {
+        const typeCompare = a.jobType.localeCompare(b.jobType);
+        if (typeCompare !== 0) return typeCompare;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+    case "newest":
+    default:
+      return copy.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  }
+}
+
+export function filterAndSortCampusJobs(
+  jobs: CampusJobRecord[],
+  filters: CampusJobFilters
+): CampusJobRecord[] {
+  const { sort, ...rest } = filters;
+  return sortCampusJobs(filterCampusJobs(jobs, rest), sort ?? "newest");
+}
+
+export function isCampusJobFilterActive(filters: CampusJobFilters): boolean {
+  return Boolean(
+    filters.query?.trim() ||
+      (filters.jobType && filters.jobType !== "all") ||
+      filters.location?.trim() ||
+      filters.remoteOnly
+  );
 }

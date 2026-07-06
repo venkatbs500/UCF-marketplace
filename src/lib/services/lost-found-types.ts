@@ -52,7 +52,17 @@ export type LostFoundItemFilters = {
   itemType?: LostFoundItemType | "all";
   category?: LostFoundCategory | "all";
   location?: string;
+  sort?: LostFoundSortOption;
 };
+
+export type LostFoundSortOption = "newest" | "item-date" | "lost-first" | "found-first";
+
+export const LOST_FOUND_SORT_OPTIONS: Array<{ id: LostFoundSortOption; label: string }> = [
+  { id: "newest", label: "Newest" },
+  { id: "item-date", label: "Item date: Newest" },
+  { id: "lost-first", label: "Lost first" },
+  { id: "found-first", label: "Found first" },
+];
 
 export type CreateLostFoundItemInput = {
   userId: string;
@@ -155,4 +165,55 @@ export function filterLostFoundItems(
       .toLowerCase();
     return haystack.includes(query);
   });
+}
+
+export function sortLostFoundItems(
+  items: LostFoundItemRecord[],
+  sort: LostFoundSortOption = "newest"
+): LostFoundItemRecord[] {
+  const copy = [...items];
+  switch (sort) {
+    case "item-date":
+      return copy.sort((a, b) => {
+        const aDate = a.itemDate ?? "1970-01-01";
+        const bDate = b.itemDate ?? "1970-01-01";
+        return bDate.localeCompare(aDate);
+      });
+    case "lost-first":
+      return copy.sort((a, b) => {
+        if (a.itemType === b.itemType) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        return a.itemType === "lost" ? -1 : 1;
+      });
+    case "found-first":
+      return copy.sort((a, b) => {
+        if (a.itemType === b.itemType) {
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        return a.itemType === "found" ? -1 : 1;
+      });
+    case "newest":
+    default:
+      return copy.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  }
+}
+
+export function filterAndSortLostFoundItems(
+  items: LostFoundItemRecord[],
+  filters: LostFoundItemFilters
+): LostFoundItemRecord[] {
+  const { sort, ...rest } = filters;
+  return sortLostFoundItems(filterLostFoundItems(items, rest), sort ?? "newest");
+}
+
+export function isLostFoundFilterActive(filters: LostFoundItemFilters): boolean {
+  return Boolean(
+    filters.query?.trim() ||
+      (filters.itemType && filters.itemType !== "all") ||
+      (filters.category && filters.category !== "all") ||
+      filters.location?.trim()
+  );
 }

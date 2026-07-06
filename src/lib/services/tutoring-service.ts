@@ -22,6 +22,12 @@ import {
 
 export { usesSupabaseTutoring, hideTutorProfileForModeration };
 
+function stableMockTutorTimestamp(tutorId: string): string {
+  const index = tutors.findIndex((entry) => entry.id === tutorId);
+  const dayOffset = index >= 0 ? index : 0;
+  return new Date(Date.UTC(2025, 0, 1 + dayOffset)).toISOString();
+}
+
 function mapMockTutorToItem(tutor: Tutor): TutorProfileItem {
   const owner: TutorOwner = {
     id: tutor.user.id,
@@ -31,6 +37,7 @@ function mapMockTutorToItem(tutor: Tutor): TutorProfileItem {
     major: tutor.user.major,
     year: tutor.user.year,
   };
+  const createdAt = stableMockTutorTimestamp(tutor.id);
 
   return mapTutorProfileRow(
     {
@@ -47,8 +54,8 @@ function mapMockTutorToItem(tutor: Tutor): TutorProfileItem {
       rating: tutor.rating,
       review_count: tutor.reviewCount,
       status: "active",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+      created_at: createdAt,
+      updated_at: createdAt,
     },
     owner
   );

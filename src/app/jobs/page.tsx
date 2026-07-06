@@ -9,10 +9,13 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { SearchBar } from "@/components/ui/search-bar";
 import { FilterChips } from "@/components/ui/filter-chips";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { JobCard } from "@/components/jobs/job-card";
+import { BrowseResultBar } from "@/components/browse/browse-result-bar";
+import { BrowseEmptyState } from "@/components/browse/browse-empty-state";
+import { BrowseSortSelect } from "@/components/browse/browse-sort-select";
+import { useBrowseUrlState } from "@/hooks/use-browse-url-state";
 import { JOB_FILTERS } from "@/lib/constants";
 import { isDemoDataEnabledWithOverride } from "@/lib/product-mode";
 import { usesSupabaseJobs } from "@/lib/jobs-mode";
@@ -21,11 +24,14 @@ import { buildSignInUrl } from "@/lib/auth";
 import { campusJobs } from "@/lib/mock-data";
 import { getCampusJobs, mapMockCampusJobToRecord } from "@/lib/services/jobs-service";
 import {
+  CAMPUS_JOB_SORT_OPTIONS,
   CAMPUS_JOB_TYPE_OPTIONS,
-  filterCampusJobs,
+  filterAndSortCampusJobs,
+  isCampusJobFilterActive,
   mapMockJobTypeToCampusJobType,
   type CampusJobFilters,
   type CampusJobRecord,
+  type CampusJobSortOption,
   type CampusJobType,
 } from "@/lib/services/jobs-types";
 
@@ -34,15 +40,150 @@ const DEMO_FILTER_OPTIONS = JOB_FILTERS.map((filter) => ({
   label: filter.label,
 }));
 
+type JobsBrowseUiState = {
+  query: string;
+  jobType: CampusJobType | "all";
+  location: string;
+  remoteOnly: boolean;
+  sort: CampusJobSortOption;
+};
+
+const DEFAULT_JOBS_BROWSE: JobsBrowseUiState = {
+  query: "",
+  jobType: "all",
+  location: "",
+  remoteOnly: false,
+  sort: "newest",
+};
+
+function parseJobsParams(params: URLSearchParams): Partial<JobsBrowseUiState> {
+  return {
+    query: params.get("search") ?? "",
+    jobType: (params.get("jobType") as CampusJobType | "all") ?? "all",
+    location: params.get("location") ?? "",
+    remoteOnly: params.get("remoteOnly") === "true",
+    sort: (params.get("sort") as CampusJobSortOption) ?? "newest",
+  };
+}
+
+function serializeJobsState(state: JobsBrowseUiState) {
+  return {
+    search: state.query,
+    jobType: state.jobType,
+    location: state.location,
+    remoteOnly: state.remoteOnly ? "true" : undefined,
+    sort: state.sort,
+  };
+}
+
+function browseUiToFilters(state: JobsBrowseUiState): CampusJobFilters {
+  return {
+    query: state.query,
+    jobType: state.jobType,
+    location: state.location,
+    remoteOnly: state.remoteOnly,
+    sort: state.sort,
+  };
+}
+
+function JobsBrowseFilters({
+  state,
+  onChange,
+  demoMode = false,
+}: {
+  state: JobsBrowseUiState;
+  onChange: (patch: Partial<JobsBrowseUiState>) => void;
+  demoMode?: boolean;
+}) {
+  return (
+    <div className="mb-4 space-y-3" data-testid="jobs-browse-filters">
+      <div className={demoMode ? undefined : "grid gap-3 lg:grid-cols-3"}>
+        <div className={demoMode ? undefined : "lg:col-span-2"}>
+          <SearchBar
+            placeholder={
+              demoMode
+                ? "Search jobs, companies, or skills..."
+                : "Search title, organization, pay, or skills..."
+            }
+            value={state.query}
+            onChange={(query) => onChange({ query })}
+            ariaLabel="Search jobs"
+          />
+        </div>
+        {!demoMode && (
+          <input
+            type="text"
+            placeholder="Filter by location"
+            value={state.location}
+            onChange={(event) => onChange({ location: event.target.value })}
+            className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
+            aria-label="Location filter"
+          />
+        )}
+      </div>
+
+      {demoMode ? (
+        <FilterChips
+          options={DEMO_FILTER_OPTIONS}
+          value={state.jobType}
+          onChange={(jobType) => onChange({ jobType })}
+          allLabel="All jobs"
+        />
+      ) : (
+        <div className="flex flex-wrap items-center gap-4">
+          <select
+            value={state.jobType}
+            onChange={(event) =>
+              onChange({ jobType: event.target.value as CampusJobType | "all" })
+            }
+            className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
+            aria-label="Job type filter"
+          >
+            <option value="all">All job types</option>
+            {CAMPUS_JOB_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <input
+              type="checkbox"
+              checked={state.remoteOnly}
+              onChange={(event) => onChange({ remoteOnly: event.target.checked })}
+              className="rounded border-white/20"
+            />
+            Remote only
+          </label>
+          <BrowseSortSelect
+            value={state.sort}
+            options={CAMPUS_JOB_SORT_OPTIONS}
+            onChange={(sort) => onChange({ sort: sort as CampusJobSortOption })}
+          />
+        </div>
+      )}
+
+      {demoMode && (
+        <BrowseSortSelect
+          value={state.sort}
+          options={CAMPUS_JOB_SORT_OPTIONS}
+          onChange={(sort) => onChange({ sort: sort as CampusJobSortOption })}
+        />
+      )}
+    </div>
+  );
+}
+
 function RealJobsBrowse() {
   const { isAuthenticated } = useAuth();
   const [jobs, setJobs] = useState<CampusJobRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [jobType, setJobType] = useState<CampusJobType | "all">("all");
-  const [location, setLocation] = useState("");
-  const [remoteOnly, setRemoteOnly] = useState(false);
+  const [browseState, setBrowseState, resetBrowseState] = useBrowseUrlState({
+    defaults: DEFAULT_JOBS_BROWSE,
+    parse: parseJobsParams,
+    serialize: serializeJobsState,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -57,17 +198,12 @@ function RealJobsBrowse() {
     };
   }, []);
 
-  const filters: CampusJobFilters = useMemo(
-    () => ({
-      query,
-      jobType,
-      location,
-      remoteOnly,
-    }),
-    [query, jobType, location, remoteOnly]
+  const filters = useMemo(() => browseUiToFilters(browseState), [browseState]);
+  const filtered = useMemo(
+    () => filterAndSortCampusJobs(jobs, filters),
+    [jobs, filters]
   );
-
-  const filtered = useMemo(() => filterCampusJobs(jobs, filters), [jobs, filters]);
+  const filtersActive = isCampusJobFilterActive(filters);
   const postHref = isAuthenticated ? "/jobs/new" : buildSignInUrl("/jobs/new");
 
   return (
@@ -99,48 +235,15 @@ function RealJobsBrowse() {
         </div>
       </div>
 
-      <div className="mb-4 grid gap-3 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <SearchBar
-            placeholder="Search title, organization, pay, or skills..."
-            value={query}
-            onChange={(value) => setQuery(value)}
-          />
-        </div>
-        <input
-          type="text"
-          placeholder="Filter by location"
-          value={location}
-          onChange={(event) => setLocation(event.target.value)}
-          className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
-          aria-label="Location filter"
-        />
-      </div>
+      <JobsBrowseFilters state={browseState} onChange={setBrowseState} />
 
-      <div className="mb-4 flex flex-wrap items-center gap-4">
-        <select
-          value={jobType}
-          onChange={(event) => setJobType(event.target.value as CampusJobType | "all")}
-          className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
-          aria-label="Job type filter"
-        >
-          <option value="all">All job types</option>
-          {CAMPUS_JOB_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <label className="flex items-center gap-2 text-sm text-muted">
-          <input
-            type="checkbox"
-            checked={remoteOnly}
-            onChange={(event) => setRemoteOnly(event.target.checked)}
-            className="rounded border-white/20"
-          />
-          Remote only
-        </label>
-      </div>
+      <BrowseResultBar
+        count={filtered.length}
+        singular="job"
+        plural="jobs"
+        filtersActive={filtersActive}
+        onReset={resetBrowseState}
+      />
 
       {loading && <LoadingSpinner className="min-h-[30vh]" label="Loading jobs..." />}
 
@@ -159,11 +262,19 @@ function RealJobsBrowse() {
       )}
 
       {!loading && filtered.length === 0 && (
-        <EmptyState
+        <BrowseEmptyState
           icon={Briefcase}
-          title="No jobs posted yet"
-          description="Post a campus job, part-time role, research opening, or student gig."
-          action={
+          totalCount={jobs.length}
+          filteredCount={filtered.length}
+          filtersActive={filtersActive}
+          moduleLabel="job"
+          moduleLabelPlural="jobs"
+          emptyAllTitle="No jobs posted yet"
+          emptyAllDescription="Post a campus job, part-time role, research opening, or student gig."
+          emptyFilterTitle="No jobs match your filters"
+          emptyFilterDescription="Try clearing search or changing job type, location, or remote filters."
+          onReset={resetBrowseState}
+          createAction={
             <Link href={postHref}>
               <Button>Post a job</Button>
             </Link>
@@ -178,23 +289,23 @@ function DemoJobsBrowse() {
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
   const demoEnabled = isDemoDataEnabledWithOverride(searchParams);
-  const [query, setQuery] = useState("");
-  const [jobType, setJobType] = useState<CampusJobType | "all">("all");
+  const [browseState, setBrowseState, resetBrowseState] = useBrowseUrlState({
+    defaults: DEFAULT_JOBS_BROWSE,
+    parse: parseJobsParams,
+    serialize: serializeJobsState,
+  });
 
   const sourceJobs = useMemo(
     () => (demoEnabled ? campusJobs.map(mapMockCampusJobToRecord) : []),
     [demoEnabled]
   );
 
-  const filters: CampusJobFilters = useMemo(
-    () => ({
-      query,
-      jobType,
-    }),
-    [query, jobType]
+  const filters = useMemo(() => browseUiToFilters(browseState), [browseState]);
+  const filtered = useMemo(
+    () => filterAndSortCampusJobs(sourceJobs, filters),
+    [sourceJobs, filters]
   );
-
-  const filtered = useMemo(() => filterCampusJobs(sourceJobs, filters), [sourceJobs, filters]);
+  const filtersActive = isCampusJobFilterActive(filters);
   const postHref = isAuthenticated ? "/jobs/new" : buildSignInUrl("/jobs/new");
 
   return (
@@ -217,20 +328,13 @@ function DemoJobsBrowse() {
 
       {demoEnabled && (
         <>
-          <div className="mb-6">
-            <SearchBar
-              placeholder="Search jobs, companies, or skills..."
-              value={query}
-              onChange={(value) => setQuery(value)}
-            />
-          </div>
-
-          <FilterChips
-            options={DEMO_FILTER_OPTIONS}
-            value={jobType}
-            onChange={setJobType}
-            allLabel="All jobs"
-            className="mb-8"
+          <JobsBrowseFilters state={browseState} onChange={setBrowseState} demoMode />
+          <BrowseResultBar
+            count={filtered.length}
+            singular="job"
+            plural="jobs"
+            filtersActive={filtersActive}
+            onReset={resetBrowseState}
           />
         </>
       )}
@@ -242,15 +346,19 @@ function DemoJobsBrowse() {
           ))}
         </div>
       ) : (
-        <EmptyState
+        <BrowseEmptyState
           icon={Briefcase}
-          title={demoEnabled ? "No jobs match your search" : "No jobs posted yet"}
-          description={
-            demoEnabled
-              ? "Try a different search or filter."
-              : "Post a campus job, part-time role, research opening, or student gig."
-          }
-          action={
+          totalCount={sourceJobs.length}
+          filteredCount={filtered.length}
+          filtersActive={filtersActive}
+          moduleLabel="job"
+          moduleLabelPlural="jobs"
+          emptyAllTitle="No jobs posted yet"
+          emptyAllDescription="Post a campus job, part-time role, research opening, or student gig."
+          emptyFilterTitle="No jobs match your search"
+          emptyFilterDescription="Try a different search or filter."
+          onReset={resetBrowseState}
+          createAction={
             !demoEnabled ? (
               <Link href={postHref}>
                 <Button>Post a job</Button>

@@ -201,8 +201,10 @@ export const QA_CHECKLIST: QACheckSection[] = [
           "On /marketplace, search by title",
           "Filter by category, condition, campus area",
           "Change sort order",
+          "Use Reset filters",
         ],
-        expected: "Result count updates. Empty state when no matches.",
+        expected:
+          "Result count updates. URL query params preserve filters. Reset clears all filters. Honest empty state when no matches.",
         status: "manual",
       },
     ],
@@ -300,7 +302,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Browse housing posts",
         steps: ["Visit /housing in real mode"],
         expected:
-          "Active housing posts from Supabase. Filters for type, rent, and location. Honest empty state when none exist.",
+          "Active housing posts from Supabase. Search + type/rent filters, sorting, result count, and reset filters. Honest empty state when none exist.",
         status: "manual",
       },
       {
@@ -444,7 +446,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Browse tutor profiles",
         steps: ["Visit /tutoring in real mode"],
         expected:
-          "Active tutor profiles from Supabase with subject, rate, and format filters. Honest empty state when none exist.",
+          "Active tutor profiles from Supabase with search, format/rate filters, sorting, result count, and reset filters. Honest empty state when none exist.",
         status: "manual",
       },
       {
@@ -517,7 +519,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Browse lost & found items",
         steps: ["Visit /lost-found in real mode"],
         expected:
-          "Active items from Supabase with lost/found filters, search, category, and location. Honest empty state when none exist.",
+          "Active items from Supabase with tab, search, category/location filters, sorting, result count, and reset filters. Honest empty state when none exist.",
         status: "manual",
       },
       {
@@ -593,7 +595,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Browse campus jobs",
         steps: ["Visit /jobs in real mode"],
         expected:
-          "Active jobs from Supabase with type, search, location, and remote filters. Honest empty state when none exist.",
+          "Active jobs from Supabase with search/type/location/remote filters, sorting, result count, and reset filters. Honest empty state when none exist.",
         status: "manual",
       },
       {
@@ -667,7 +669,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Browse campus events",
         steps: ["Visit /events in real mode"],
         expected:
-          "Active upcoming events from Supabase with type, search, location, and date filters. Honest empty state when none exist.",
+          "Active upcoming events from Supabase with search/type/location/upcoming filters, sorting, result count, and reset filters. Honest empty state when none exist.",
         status: "manual",
       },
       {
@@ -743,7 +745,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Browse student discounts",
         steps: ["Visit /discounts in real mode"],
         expected:
-          "Active non-expired discounts from Supabase with category, search, online/local, and expiring-soon filters. Honest empty state when none exist.",
+          "Active non-expired discounts from Supabase with search/category/online/local/expiring filters, sorting, result count, and reset filters. Honest empty state when none exist.",
         status: "manual",
       },
       {

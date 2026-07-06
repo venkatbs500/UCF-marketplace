@@ -110,9 +110,9 @@ export function CampusModules() {
   return (
     <section>
       <div className="mb-6 space-y-2">
-        <h2 className="text-2xl font-bold">Everything Campus Life</h2>
+        <h2 className="text-2xl font-bold">Explore what&apos;s live</h2>
         <p className="text-sm text-muted">
-          One app for everything you need as a student
+          Browse student posts across Knight Market — marketplace, housing, tutoring, and more
         </p>
         <DemoModeBadge />
       </div>

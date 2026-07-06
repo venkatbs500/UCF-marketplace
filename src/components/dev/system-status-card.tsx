@@ -44,6 +44,11 @@ const STATUS_ROWS: StatusRow[] = [
   },
   { label: "Coming-Soon Actions", status: "ready" },
   {
+    label: "Search + Discovery Polish",
+    status: "ready",
+    detail: "consistent browse filters, counts, reset, sort",
+  },
+  {
     label: "Supabase Profile Sync",
     status: usesSupabaseMarketplace() ? "ready" : "not-connected",
     detail: usesSupabaseMarketplace() ? "profiles table" : "local/demo mode",

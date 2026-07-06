@@ -17,7 +17,8 @@ test("marketplace loads listings and supports search", async ({ page }) => {
 test("category filter does not crash marketplace", async ({ page }) => {
   await page.goto("/marketplace");
   await page.getByRole("button", { name: /📚\s*Textbooks/i }).click();
-  await expect(page.getByRole("heading", { name: /Listing/i })).toBeVisible();
+  await expect(page.getByTestId("browse-result-count")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Marketplace" })).toBeVisible();
 });
 
 test("default marketplace view does not duplicate featured listing cards", async ({ page }) => {

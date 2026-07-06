@@ -1,28 +1,52 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Heart, PlusCircle } from "lucide-react";
+import type { ListingCondition, ListingSortOption, MarketplaceCategory } from "@/lib/types";
 import { AppShell } from "@/components/layout/app-shell";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Button } from "@/components/ui/button";
 import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { ListingGrid } from "@/components/marketplace/listing-grid";
+import { BrowseResultBar } from "@/components/browse/browse-result-bar";
 import {
   MarketplaceSearchControls,
   DEFAULT_MARKETPLACE_SEARCH,
 } from "@/components/marketplace/marketplace-search-state";
 import { useUserListings } from "@/components/providers/user-listings-provider";
 import { useMarketplaceBrowseListings } from "@/hooks/use-marketplace-browse-listings";
+import { useBrowseUrlState } from "@/hooks/use-browse-url-state";
 import {
   filterAndSortListings,
   getBrowseListings,
   getMarketplaceBrowseLayout,
+  isMarketplaceFilterActive,
 } from "@/lib/marketplace-utils";
 import { isDemoDataEnabledWithOverride } from "@/lib/product-mode";
 import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
+
+function parseMarketplaceParams(params: URLSearchParams) {
+  return {
+    search: params.get("search") ?? "",
+    category: (params.get("category") as MarketplaceCategory | "all") ?? "all",
+    condition: (params.get("condition") as ListingCondition | "all") ?? "all",
+    campusArea: params.get("campusArea") ?? "all",
+    sort: (params.get("sort") as ListingSortOption) ?? "newest",
+  };
+}
+
+function serializeMarketplaceState(state: typeof DEFAULT_MARKETPLACE_SEARCH) {
+  return {
+    search: state.search,
+    category: state.category,
+    condition: state.condition,
+    campusArea: state.campusArea,
+    sort: state.sort,
+  };
+}
 
 export default function MarketplacePage() {
   return (
@@ -41,7 +65,11 @@ export default function MarketplacePage() {
 function MarketplacePageContent() {
   const searchParams = useSearchParams();
   const { userListings, listingsVersion } = useUserListings();
-  const [searchState, setSearchState] = useState(DEFAULT_MARKETPLACE_SEARCH);
+  const [searchState, setSearchState, resetSearchState] = useBrowseUrlState({
+    defaults: DEFAULT_MARKETPLACE_SEARCH,
+    parse: parseMarketplaceParams,
+    serialize: serializeMarketplaceState,
+  });
   const demoEnabled = isDemoDataEnabledWithOverride(searchParams);
   const supabaseMode = usesSupabaseMarketplace();
 
@@ -69,9 +97,17 @@ function MarketplacePageContent() {
     [filtered, searchState]
   );
 
+  const filtersActive = isMarketplaceFilterActive(searchState);
   const isRealEmpty = !demoEnabled && !supabaseMode && allListings.length === 0;
   const isSupabaseEmpty = supabaseMode && !supabaseLoading && allListings.length === 0;
   const listingDeleted = searchParams.get("listingDeleted") === "1";
+
+  const handleSearchChange = useCallback(
+    (patch: Partial<typeof DEFAULT_MARKETPLACE_SEARCH>) => {
+      setSearchState(patch);
+    },
+    [setSearchState]
+  );
 
   return (
     <AppShell>
@@ -108,10 +144,11 @@ function MarketplacePageContent() {
         </div>
       </div>
 
-      <div className="mb-8">
+      <div className="mb-6">
         <MarketplaceSearchControls
           state={searchState}
-          onChange={(patch) => setSearchState((s) => ({ ...s, ...patch }))}
+          onChange={handleSearchChange}
+          onReset={resetSearchState}
         />
       </div>
 
@@ -138,21 +175,28 @@ function MarketplacePageContent() {
           )}
 
           <section data-testid="browse-listings-section">
-            <h3 className="mb-4 text-lg font-semibold">
-              {resultCount} Listing{resultCount !== 1 ? "s" : ""}
-            </h3>
+            <BrowseResultBar
+              count={resultCount}
+              singular="listing"
+              filtersActive={filtersActive}
+              onReset={resetSearchState}
+            />
             <ListingGrid
               listings={browseListings}
               showSellCta
               emptyTitle={
-                isRealEmpty || isSupabaseEmpty
-                  ? "No student listings yet"
-                  : "No listings match your search"
+                filtersActive && allListings.length > 0
+                  ? "No listings match your filters"
+                  : isRealEmpty || isSupabaseEmpty
+                    ? "No student listings yet"
+                    : "No listings match your search"
               }
               emptyDescription={
-                isRealEmpty || isSupabaseEmpty
-                  ? "Be the first verified student to post something on Knight Market."
-                  : "Try different filters or post something new."
+                filtersActive && allListings.length > 0
+                  ? "Try clearing search or changing your filters."
+                  : isRealEmpty || isSupabaseEmpty
+                    ? "Be the first verified student to post something on Knight Market."
+                    : "Try different filters or post something new."
               }
               emptyPrimaryLabel={isRealEmpty || isSupabaseEmpty ? "Post the first listing" : undefined}
             />

@@ -52,7 +52,16 @@ export type TutorProfileFilters = {
   format?: TutoringFormat | "all";
   minRate?: number;
   maxRate?: number;
+  sort?: TutorSortOption;
 };
+
+export type TutorSortOption = "newest" | "rate-asc" | "rate-desc";
+
+export const TUTOR_SORT_OPTIONS: Array<{ id: TutorSortOption; label: string }> = [
+  { id: "newest", label: "Newest" },
+  { id: "rate-asc", label: "Rate: Low to High" },
+  { id: "rate-desc", label: "Rate: High to Low" },
+];
 
 export type CreateTutorProfileInput = {
   userId: string;
@@ -159,4 +168,39 @@ export function filterTutorProfiles(
 
     return haystack.includes(query);
   });
+}
+
+export function sortTutorProfiles(
+  profiles: TutorProfileItem[],
+  sort: TutorSortOption = "newest"
+): TutorProfileItem[] {
+  const copy = [...profiles];
+  switch (sort) {
+    case "rate-asc":
+      return copy.sort((a, b) => (a.hourlyRate ?? Infinity) - (b.hourlyRate ?? Infinity));
+    case "rate-desc":
+      return copy.sort((a, b) => (b.hourlyRate ?? 0) - (a.hourlyRate ?? 0));
+    case "newest":
+    default:
+      return copy.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  }
+}
+
+export function filterAndSortTutorProfiles(
+  profiles: TutorProfileItem[],
+  filters: TutorProfileFilters
+): TutorProfileItem[] {
+  const { sort, ...rest } = filters;
+  return sortTutorProfiles(filterTutorProfiles(profiles, rest), sort ?? "newest");
+}
+
+export function isTutorFilterActive(filters: TutorProfileFilters): boolean {
+  return Boolean(
+    filters.query?.trim() ||
+      (filters.format && filters.format !== "all") ||
+      filters.minRate != null ||
+      filters.maxRate != null
+  );
 }

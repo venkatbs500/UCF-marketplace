@@ -10,10 +10,13 @@ import { Tabs } from "@/components/ui/tabs";
 import { SearchBar } from "@/components/ui/search-bar";
 import { FilterChips } from "@/components/ui/filter-chips";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { LostFoundCard } from "@/components/lost-found/lost-found-card";
+import { BrowseResultBar } from "@/components/browse/browse-result-bar";
+import { BrowseEmptyState } from "@/components/browse/browse-empty-state";
+import { BrowseSortSelect } from "@/components/browse/browse-sort-select";
+import { useBrowseUrlState } from "@/hooks/use-browse-url-state";
 import { LOST_FOUND_CATEGORIES } from "@/lib/constants";
 import { isDemoDataEnabledWithOverride } from "@/lib/product-mode";
 import { usesSupabaseLostFound } from "@/lib/lost-found-mode";
@@ -25,22 +28,133 @@ import {
   mapMockLostFoundItemToRecord,
 } from "@/lib/services/lost-found-service";
 import {
-  filterLostFoundItems,
+  filterAndSortLostFoundItems,
+  isLostFoundFilterActive,
+  LOST_FOUND_SORT_OPTIONS,
   type LostFoundCategory,
   type LostFoundItemFilters,
   type LostFoundItemRecord,
   type LostFoundItemType,
+  type LostFoundSortOption,
 } from "@/lib/services/lost-found-types";
+
+type LostFoundBrowseUiState = {
+  query: string;
+  itemType: LostFoundItemType | "all";
+  category: LostFoundCategory | "all";
+  location: string;
+  sort: LostFoundSortOption;
+};
+
+const DEFAULT_LOST_FOUND_BROWSE: LostFoundBrowseUiState = {
+  query: "",
+  itemType: "all",
+  category: "all",
+  location: "",
+  sort: "newest",
+};
+
+function parseLostFoundParams(params: URLSearchParams): Partial<LostFoundBrowseUiState> {
+  return {
+    query: params.get("search") ?? "",
+    itemType: (params.get("type") as LostFoundItemType | "all") ?? "all",
+    category: (params.get("category") as LostFoundCategory | "all") ?? "all",
+    location: params.get("location") ?? "",
+    sort: (params.get("sort") as LostFoundSortOption) ?? "newest",
+  };
+}
+
+function serializeLostFoundState(state: LostFoundBrowseUiState) {
+  return {
+    search: state.query,
+    type: state.itemType,
+    category: state.category,
+    location: state.location,
+    sort: state.sort,
+  };
+}
+
+function browseUiToFilters(state: LostFoundBrowseUiState): LostFoundItemFilters {
+  return {
+    query: state.query,
+    itemType: state.itemType,
+    category: state.category,
+    location: state.location,
+    sort: state.sort,
+  };
+}
+
+function LostFoundBrowseFilters({
+  state,
+  onChange,
+  showLocation = true,
+}: {
+  state: LostFoundBrowseUiState;
+  onChange: (patch: Partial<LostFoundBrowseUiState>) => void;
+  showLocation?: boolean;
+}) {
+  return (
+    <div className="mb-4 space-y-3" data-testid="lost-found-browse-filters">
+      <Tabs
+        tabs={[
+          { id: "all", label: "All" },
+          { id: "lost", label: "Lost" },
+          { id: "found", label: "Found" },
+        ]}
+        activeTab={state.itemType}
+        onTabChange={(tab) => onChange({ itemType: tab as LostFoundItemType | "all" })}
+      />
+
+      <div className={showLocation ? "grid gap-3 lg:grid-cols-3" : undefined}>
+        <div className={showLocation ? "lg:col-span-2" : undefined}>
+          <SearchBar
+            placeholder="Search title, description, or location..."
+            value={state.query}
+            onChange={(query) => onChange({ query })}
+            ariaLabel="Search lost and found"
+          />
+        </div>
+        {showLocation && (
+          <input
+            type="text"
+            placeholder="Filter by location/area"
+            value={state.location}
+            onChange={(event) => onChange({ location: event.target.value })}
+            className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
+            aria-label="Location filter"
+          />
+        )}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <BrowseSortSelect
+          value={state.sort}
+          options={LOST_FOUND_SORT_OPTIONS}
+          onChange={(sort) => onChange({ sort: sort as LostFoundSortOption })}
+        />
+      </div>
+
+      <FilterChips
+        options={LOST_FOUND_CATEGORIES}
+        value={state.category}
+        onChange={(category) => onChange({ category })}
+        allLabel="All categories"
+        size="sm"
+      />
+    </div>
+  );
+}
 
 function RealLostFoundBrowse() {
   const { isAuthenticated } = useAuth();
   const [items, setItems] = useState<LostFoundItemRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("all");
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<LostFoundCategory | "all">("all");
-  const [location, setLocation] = useState("");
+  const [browseState, setBrowseState, resetBrowseState] = useBrowseUrlState({
+    defaults: DEFAULT_LOST_FOUND_BROWSE,
+    parse: parseLostFoundParams,
+    serialize: serializeLostFoundState,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -55,17 +169,12 @@ function RealLostFoundBrowse() {
     };
   }, []);
 
-  const filters: LostFoundItemFilters = useMemo(
-    () => ({
-      query,
-      itemType: activeTab as LostFoundItemType | "all",
-      category,
-      location,
-    }),
-    [query, activeTab, category, location]
+  const filters = useMemo(() => browseUiToFilters(browseState), [browseState]);
+  const filtered = useMemo(
+    () => filterAndSortLostFoundItems(items, filters),
+    [items, filters]
   );
-
-  const filtered = useMemo(() => filterLostFoundItems(items, filters), [items, filters]);
+  const filtersActive = isLostFoundFilterActive(filters);
   const postHref = isAuthenticated ? "/lost-found/new" : buildSignInUrl("/lost-found/new");
 
   return (
@@ -97,42 +206,14 @@ function RealLostFoundBrowse() {
         </div>
       </div>
 
-      <Tabs
-        tabs={[
-          { id: "all", label: "All" },
-          { id: "lost", label: "Lost" },
-          { id: "found", label: "Found" },
-        ]}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        className="mb-4"
-      />
+      <LostFoundBrowseFilters state={browseState} onChange={setBrowseState} />
 
-      <div className="mb-4 grid gap-3 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <SearchBar
-            placeholder="Search title, description, or location..."
-            value={query}
-            onChange={(value) => setQuery(value)}
-          />
-        </div>
-        <input
-          type="text"
-          placeholder="Filter by location/area"
-          value={location}
-          onChange={(event) => setLocation(event.target.value)}
-          className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
-          aria-label="Location filter"
-        />
-      </div>
-
-      <FilterChips
-        options={LOST_FOUND_CATEGORIES}
-        value={category}
-        onChange={setCategory}
-        allLabel="All categories"
-        size="sm"
-        className="mb-6"
+      <BrowseResultBar
+        count={filtered.length}
+        singular="item"
+        plural="items"
+        filtersActive={filtersActive}
+        onReset={resetBrowseState}
       />
 
       {loading && <LoadingSpinner className="min-h-[30vh]" label="Loading lost & found items..." />}
@@ -152,11 +233,19 @@ function RealLostFoundBrowse() {
       )}
 
       {!loading && filtered.length === 0 && (
-        <EmptyState
+        <BrowseEmptyState
           icon={Search}
-          title="No lost or found items yet"
-          description="Post an item to help UCF students recover what matters."
-          action={
+          totalCount={items.length}
+          filteredCount={filtered.length}
+          filtersActive={filtersActive}
+          moduleLabel="item"
+          moduleLabelPlural="items"
+          emptyAllTitle="No lost or found items yet"
+          emptyAllDescription="Post an item to help UCF students recover what matters."
+          emptyFilterTitle="No items match your filters"
+          emptyFilterDescription="Try clearing search or changing tab, category, or location filters."
+          onReset={resetBrowseState}
+          createAction={
             <Link href={postHref}>
               <Button>Post lost/found item</Button>
             </Link>
@@ -171,25 +260,23 @@ function DemoLostFoundBrowse() {
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
   const demoEnabled = isDemoDataEnabledWithOverride(searchParams);
-  const [activeTab, setActiveTab] = useState("all");
-  const [category, setCategory] = useState<LostFoundCategory | "all">("all");
-  const [query, setQuery] = useState("");
+  const [browseState, setBrowseState, resetBrowseState] = useBrowseUrlState({
+    defaults: DEFAULT_LOST_FOUND_BROWSE,
+    parse: parseLostFoundParams,
+    serialize: serializeLostFoundState,
+  });
 
   const sourceItems = useMemo(
     () => (demoEnabled ? lostFoundItems.map(mapMockLostFoundItemToRecord) : []),
     [demoEnabled]
   );
 
-  const filters: LostFoundItemFilters = useMemo(
-    () => ({
-      query,
-      itemType: activeTab as LostFoundItemType | "all",
-      category,
-    }),
-    [query, activeTab, category]
+  const filters = useMemo(() => browseUiToFilters(browseState), [browseState]);
+  const filtered = useMemo(
+    () => filterAndSortLostFoundItems(sourceItems, filters),
+    [sourceItems, filters]
   );
-
-  const filtered = useMemo(() => filterLostFoundItems(sourceItems, filters), [sourceItems, filters]);
+  const filtersActive = isLostFoundFilterActive(filters);
   const postHref = isAuthenticated ? "/lost-found/new" : buildSignInUrl("/lost-found/new");
 
   return (
@@ -222,32 +309,17 @@ function DemoLostFoundBrowse() {
 
       {demoEnabled && (
         <>
-          <Tabs
-            tabs={[
-              { id: "all", label: "All" },
-              { id: "lost", label: "Lost" },
-              { id: "found", label: "Found" },
-            ]}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            className="mb-4"
+          <LostFoundBrowseFilters
+            state={browseState}
+            onChange={setBrowseState}
+            showLocation={false}
           />
-
-          <div className="mb-4">
-            <SearchBar
-              placeholder="Search title, description, or location..."
-              value={query}
-              onChange={(value) => setQuery(value)}
-            />
-          </div>
-
-          <FilterChips
-            options={LOST_FOUND_CATEGORIES}
-            value={category}
-            onChange={setCategory}
-            allLabel="All categories"
-            size="sm"
-            className="mb-6"
+          <BrowseResultBar
+            count={filtered.length}
+            singular="item"
+            plural="items"
+            filtersActive={filtersActive}
+            onReset={resetBrowseState}
           />
         </>
       )}
@@ -259,15 +331,19 @@ function DemoLostFoundBrowse() {
           ))}
         </div>
       ) : (
-        <EmptyState
+        <BrowseEmptyState
           icon={Search}
-          title={demoEnabled ? "No items match your filters" : "No lost or found items yet"}
-          description={
-            demoEnabled
-              ? "Try a different tab or category."
-              : "Post an item to help UCF students recover what matters."
-          }
-          action={
+          totalCount={sourceItems.length}
+          filteredCount={filtered.length}
+          filtersActive={filtersActive}
+          moduleLabel="item"
+          moduleLabelPlural="items"
+          emptyAllTitle="No lost or found items yet"
+          emptyAllDescription="Post an item to help UCF students recover what matters."
+          emptyFilterTitle="No items match your filters"
+          emptyFilterDescription="Try a different tab or category."
+          onReset={resetBrowseState}
+          createAction={
             !demoEnabled ? (
               <Link href={postHref}>
                 <Button>Post lost/found item</Button>

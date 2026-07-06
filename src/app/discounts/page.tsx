@@ -9,10 +9,13 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { SearchBar } from "@/components/ui/search-bar";
 import { FilterChips } from "@/components/ui/filter-chips";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { DiscountCard } from "@/components/discounts/discount-card";
+import { BrowseResultBar } from "@/components/browse/browse-result-bar";
+import { BrowseEmptyState } from "@/components/browse/browse-empty-state";
+import { BrowseSortSelect } from "@/components/browse/browse-sort-select";
+import { useBrowseUrlState } from "@/hooks/use-browse-url-state";
 import { isDemoDataEnabledWithOverride } from "@/lib/product-mode";
 import { usesSupabaseDiscounts } from "@/lib/discounts-mode";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -23,30 +26,194 @@ import {
   mapMockStudentDiscountToRecord,
 } from "@/lib/services/discounts-service";
 import {
+  STUDENT_DISCOUNT_SORT_OPTIONS,
+  STUDENT_DISCOUNT_TYPE_LABELS,
   STUDENT_DISCOUNT_TYPE_OPTIONS,
-  filterStudentDiscounts,
+  filterAndSortStudentDiscounts,
+  isStudentDiscountFilterActive,
   mapMockDiscountCategoryToType,
   type StudentDiscountFilters,
   type StudentDiscountRecord,
+  type StudentDiscountSortOption,
   type StudentDiscountType,
 } from "@/lib/services/discounts-types";
 import { DISCOUNT_CATEGORIES } from "@/lib/constants";
 
-const DEMO_FILTER_OPTIONS = DISCOUNT_CATEGORIES.map((filter) => ({
-  id: mapMockDiscountCategoryToType(filter.id),
-  label: filter.label,
-}));
+const DEMO_FILTER_OPTIONS = (() => {
+  const seen = new Set<StudentDiscountType>();
+  const options: Array<{ id: StudentDiscountType; label: string }> = [];
+  for (const filter of DISCOUNT_CATEGORIES) {
+    const id = mapMockDiscountCategoryToType(filter.id);
+    if (seen.has(id)) continue;
+    seen.add(id);
+    options.push({ id, label: STUDENT_DISCOUNT_TYPE_LABELS[id] ?? filter.label });
+  }
+  return options;
+})();
+
+type DiscountsBrowseUiState = {
+  query: string;
+  discountType: StudentDiscountType | "all";
+  onlineOnly: boolean;
+  localOnly: boolean;
+  expiringSoon: boolean;
+  sort: StudentDiscountSortOption;
+};
+
+const DEFAULT_DISCOUNTS_BROWSE: DiscountsBrowseUiState = {
+  query: "",
+  discountType: "all",
+  onlineOnly: false,
+  localOnly: false,
+  expiringSoon: false,
+  sort: "newest",
+};
+
+function parseDiscountsParams(params: URLSearchParams): Partial<DiscountsBrowseUiState> {
+  return {
+    query: params.get("search") ?? "",
+    discountType: (params.get("discountType") as StudentDiscountType | "all") ?? "all",
+    onlineOnly: params.get("onlineOnly") === "true",
+    localOnly: params.get("localOnly") === "true",
+    expiringSoon: params.get("expiringSoon") === "true",
+    sort: (params.get("sort") as StudentDiscountSortOption) ?? "newest",
+  };
+}
+
+function serializeDiscountsState(state: DiscountsBrowseUiState) {
+  return {
+    search: state.query,
+    discountType: state.discountType,
+    onlineOnly: state.onlineOnly ? "true" : undefined,
+    localOnly: state.localOnly ? "true" : undefined,
+    expiringSoon: state.expiringSoon ? "true" : undefined,
+    sort: state.sort,
+  };
+}
+
+function browseUiToFilters(state: DiscountsBrowseUiState): StudentDiscountFilters {
+  return {
+    query: state.query,
+    discountType: state.discountType,
+    onlineOnly: state.onlineOnly,
+    localOnly: state.localOnly,
+    expiringSoon: state.expiringSoon,
+    sort: state.sort,
+  };
+}
+
+function DiscountsBrowseFilters({
+  state,
+  onChange,
+  demoMode = false,
+}: {
+  state: DiscountsBrowseUiState;
+  onChange: (patch: Partial<DiscountsBrowseUiState>) => void;
+  demoMode?: boolean;
+}) {
+  return (
+    <div className="mb-4 space-y-3" data-testid="discounts-browse-filters">
+      <SearchBar
+        placeholder={
+          demoMode
+            ? "Search businesses or deals..."
+            : "Search businesses, deals, or promo codes..."
+        }
+        value={state.query}
+        onChange={(query) => onChange({ query })}
+        ariaLabel="Search discounts"
+      />
+
+      {demoMode ? (
+        <FilterChips
+          options={DEMO_FILTER_OPTIONS}
+          value={state.discountType}
+          onChange={(discountType) => onChange({ discountType })}
+          allLabel="All Deals"
+        />
+      ) : (
+        <div className="flex flex-wrap items-center gap-4">
+          <select
+            value={state.discountType}
+            onChange={(event) =>
+              onChange({ discountType: event.target.value as StudentDiscountType | "all" })
+            }
+            className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
+            aria-label="Discount category filter"
+          >
+            <option value="all">All categories</option>
+            {STUDENT_DISCOUNT_TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <input
+              type="checkbox"
+              checked={state.onlineOnly}
+              onChange={(event) => {
+                onChange({
+                  onlineOnly: event.target.checked,
+                  localOnly: event.target.checked ? false : state.localOnly,
+                });
+              }}
+              className="rounded border-white/20"
+            />
+            Online only
+          </label>
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <input
+              type="checkbox"
+              checked={state.localOnly}
+              onChange={(event) => {
+                onChange({
+                  localOnly: event.target.checked,
+                  onlineOnly: event.target.checked ? false : state.onlineOnly,
+                });
+              }}
+              className="rounded border-white/20"
+            />
+            Local only
+          </label>
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <input
+              type="checkbox"
+              checked={state.expiringSoon}
+              onChange={(event) => onChange({ expiringSoon: event.target.checked })}
+              className="rounded border-white/20"
+            />
+            Expiring soon
+          </label>
+          <BrowseSortSelect
+            value={state.sort}
+            options={STUDENT_DISCOUNT_SORT_OPTIONS}
+            onChange={(sort) => onChange({ sort: sort as StudentDiscountSortOption })}
+          />
+        </div>
+      )}
+
+      {demoMode && (
+        <BrowseSortSelect
+          value={state.sort}
+          options={STUDENT_DISCOUNT_SORT_OPTIONS}
+          onChange={(sort) => onChange({ sort: sort as StudentDiscountSortOption })}
+        />
+      )}
+    </div>
+  );
+}
 
 function RealDiscountsBrowse() {
   const { isAuthenticated } = useAuth();
   const [discounts, setDiscounts] = useState<StudentDiscountRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [discountType, setDiscountType] = useState<StudentDiscountType | "all">("all");
-  const [onlineOnly, setOnlineOnly] = useState(false);
-  const [localOnly, setLocalOnly] = useState(false);
-  const [expiringSoon, setExpiringSoon] = useState(false);
+  const [browseState, setBrowseState, resetBrowseState] = useBrowseUrlState({
+    defaults: DEFAULT_DISCOUNTS_BROWSE,
+    parse: parseDiscountsParams,
+    serialize: serializeDiscountsState,
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -61,21 +228,12 @@ function RealDiscountsBrowse() {
     };
   }, []);
 
-  const filters: StudentDiscountFilters = useMemo(
-    () => ({
-      query,
-      discountType,
-      onlineOnly,
-      localOnly,
-      expiringSoon,
-    }),
-    [query, discountType, onlineOnly, localOnly, expiringSoon]
-  );
-
+  const filters = useMemo(() => browseUiToFilters(browseState), [browseState]);
   const filtered = useMemo(
-    () => filterStudentDiscounts(discounts, filters),
+    () => filterAndSortStudentDiscounts(discounts, filters),
     [discounts, filters]
   );
+  const filtersActive = isStudentDiscountFilterActive(filters);
   const postHref = isAuthenticated ? "/discounts/new" : buildSignInUrl("/discounts/new");
 
   return (
@@ -107,64 +265,15 @@ function RealDiscountsBrowse() {
         </div>
       </div>
 
-      <div className="mb-4">
-        <SearchBar
-          placeholder="Search businesses, deals, or promo codes..."
-          value={query}
-          onChange={(value) => setQuery(value)}
-        />
-      </div>
+      <DiscountsBrowseFilters state={browseState} onChange={setBrowseState} />
 
-      <div className="mb-4 flex flex-wrap items-center gap-4">
-        <select
-          value={discountType}
-          onChange={(event) =>
-            setDiscountType(event.target.value as StudentDiscountType | "all")
-          }
-          className="h-11 rounded-2xl border border-white/10 bg-white/5 px-4 text-sm"
-          aria-label="Discount category filter"
-        >
-          <option value="all">All categories</option>
-          {STUDENT_DISCOUNT_TYPE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <label className="flex items-center gap-2 text-sm text-muted">
-          <input
-            type="checkbox"
-            checked={onlineOnly}
-            onChange={(event) => {
-              setOnlineOnly(event.target.checked);
-              if (event.target.checked) setLocalOnly(false);
-            }}
-            className="rounded border-white/20"
-          />
-          Online only
-        </label>
-        <label className="flex items-center gap-2 text-sm text-muted">
-          <input
-            type="checkbox"
-            checked={localOnly}
-            onChange={(event) => {
-              setLocalOnly(event.target.checked);
-              if (event.target.checked) setOnlineOnly(false);
-            }}
-            className="rounded border-white/20"
-          />
-          Local only
-        </label>
-        <label className="flex items-center gap-2 text-sm text-muted">
-          <input
-            type="checkbox"
-            checked={expiringSoon}
-            onChange={(event) => setExpiringSoon(event.target.checked)}
-            className="rounded border-white/20"
-          />
-          Expiring soon
-        </label>
-      </div>
+      <BrowseResultBar
+        count={filtered.length}
+        singular="discount"
+        plural="discounts"
+        filtersActive={filtersActive}
+        onReset={resetBrowseState}
+      />
 
       {loading && <LoadingSpinner className="min-h-[30vh]" label="Loading discounts..." />}
 
@@ -183,11 +292,19 @@ function RealDiscountsBrowse() {
       )}
 
       {!loading && filtered.length === 0 && (
-        <EmptyState
+        <BrowseEmptyState
           icon={Tag}
-          title="No discounts posted yet"
-          description="Post a student deal, promo code, or local UCF-friendly offer."
-          action={
+          totalCount={discounts.length}
+          filteredCount={filtered.length}
+          filtersActive={filtersActive}
+          moduleLabel="discount"
+          moduleLabelPlural="discounts"
+          emptyAllTitle="No discounts posted yet"
+          emptyAllDescription="Post a student deal, promo code, or local UCF-friendly offer."
+          emptyFilterTitle="No discounts match your filters"
+          emptyFilterDescription="Try clearing search or changing category or deal filters."
+          onReset={resetBrowseState}
+          createAction={
             <Link href={postHref}>
               <Button>Post a discount</Button>
             </Link>
@@ -202,8 +319,11 @@ function DemoDiscountsBrowse() {
   const searchParams = useSearchParams();
   const { isAuthenticated } = useAuth();
   const demoEnabled = isDemoDataEnabledWithOverride(searchParams);
-  const [query, setQuery] = useState("");
-  const [discountType, setDiscountType] = useState<StudentDiscountType | "all">("all");
+  const [browseState, setBrowseState, resetBrowseState] = useBrowseUrlState({
+    defaults: DEFAULT_DISCOUNTS_BROWSE,
+    parse: parseDiscountsParams,
+    serialize: serializeDiscountsState,
+  });
 
   const sourceDiscounts = useMemo(
     () =>
@@ -215,18 +335,12 @@ function DemoDiscountsBrowse() {
     [demoEnabled]
   );
 
-  const filters: StudentDiscountFilters = useMemo(
-    () => ({
-      query,
-      discountType,
-    }),
-    [query, discountType]
-  );
-
+  const filters = useMemo(() => browseUiToFilters(browseState), [browseState]);
   const filtered = useMemo(
-    () => filterStudentDiscounts(sourceDiscounts, filters),
+    () => filterAndSortStudentDiscounts(sourceDiscounts, filters),
     [sourceDiscounts, filters]
   );
+  const filtersActive = isStudentDiscountFilterActive(filters);
   const postHref = isAuthenticated ? "/discounts/new" : buildSignInUrl("/discounts/new");
 
   return (
@@ -247,21 +361,17 @@ function DemoDiscountsBrowse() {
         </Link>
       </div>
 
-      <div className="mb-6">
-        <SearchBar
-          placeholder="Search businesses or deals..."
-          value={query}
-          onChange={setQuery}
-        />
-      </div>
+      <DiscountsBrowseFilters state={browseState} onChange={setBrowseState} demoMode />
 
-      <FilterChips
-        options={DEMO_FILTER_OPTIONS}
-        value={discountType}
-        onChange={setDiscountType}
-        allLabel="All Deals"
-        className="mb-8"
-      />
+      {demoEnabled && (
+        <BrowseResultBar
+          count={filtered.length}
+          singular="discount"
+          plural="discounts"
+          filtersActive={filtersActive}
+          onReset={resetBrowseState}
+        />
+      )}
 
       {filtered.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -270,14 +380,18 @@ function DemoDiscountsBrowse() {
           ))}
         </div>
       ) : (
-        <EmptyState
+        <BrowseEmptyState
           icon={Tag}
-          title={demoEnabled ? "No deals match your search" : "No discounts posted yet"}
-          description={
-            demoEnabled
-              ? "Try a different search or category."
-              : "Post a student deal, promo code, or local UCF-friendly offer."
-          }
+          totalCount={sourceDiscounts.length}
+          filteredCount={filtered.length}
+          filtersActive={filtersActive}
+          moduleLabel="discount"
+          moduleLabelPlural="discounts"
+          emptyAllTitle="No discounts posted yet"
+          emptyAllDescription="Post a student deal, promo code, or local UCF-friendly offer."
+          emptyFilterTitle="No deals match your search"
+          emptyFilterDescription="Try a different search or category."
+          onReset={resetBrowseState}
         />
       )}
     </>

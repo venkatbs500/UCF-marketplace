@@ -289,6 +289,11 @@ export const LISTING_SORT_OPTIONS: { id: ListingSortOption; label: string }[] = 
   { id: "featured", label: "Featured" },
 ];
 
+/** Primary sort options shown on the marketplace browse page. */
+export const MARKETPLACE_BROWSE_SORT_OPTIONS = LISTING_SORT_OPTIONS.filter((option) =>
+  ["newest", "price-asc", "price-desc"].includes(option.id)
+);
+
 export const CONDITION_FILTER_OPTIONS = [
   { id: "all", label: "All Conditions" },
   { id: "new", label: "New" },
