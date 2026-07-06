@@ -21,6 +21,9 @@ export type ReportService = {
   hideMessageForModeration: (
     messageId: string
   ) => Promise<{ success: boolean; error?: string }>;
+  hideHousingPostForModeration: (
+    housingPostId: string
+  ) => Promise<{ success: boolean; error?: string }>;
 };
 
 function isSupabaseModerationMode(): boolean {
@@ -44,6 +47,9 @@ const mockReportService: ReportService = {
     return { success: true };
   },
   async hideMessageForModeration() {
+    return { success: true };
+  },
+  async hideHousingPostForModeration() {
     return { success: true };
   },
 };

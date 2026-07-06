@@ -104,6 +104,15 @@ export function AdminDashboard() {
     await runStatusUpdate(report.id, "resolved");
   };
 
+  const runHideHousingPost = async (report: ReportItem) => {
+    const result = await service.hideHousingPostForModeration(report.targetId);
+    if (!result.success) {
+      setError(result.error ?? "We could not remove this housing post.");
+      return;
+    }
+    await runStatusUpdate(report.id, "resolved");
+  };
+
   return (
     <>
       <div className="mb-4 flex items-center gap-2">
@@ -253,6 +262,23 @@ export function AdminDashboard() {
                       }
                     >
                       Hide message
+                    </Button>
+                  )}
+                  {report.targetType === "housing_post" && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() =>
+                        void askConfirm({
+                          title: "Remove housing post?",
+                          description:
+                            "This will set the housing post status to removed and hide it from browse.",
+                          onConfirm: () => void runHideHousingPost(report),
+                          destructive: true,
+                        })
+                      }
+                    >
+                      Remove housing post
                     </Button>
                   )}
                 </div>

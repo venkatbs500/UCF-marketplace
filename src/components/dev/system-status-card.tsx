@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usesSupabaseMessaging } from "@/lib/messaging-mode";
+import { usesSupabaseHousing } from "@/lib/housing-mode";
 import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
 import { usesSupabaseSavedListings } from "@/lib/saved-listings-mode";
 import { getProductMode, isDemoDataEnabled, isRealDataMode } from "@/lib/product-mode";
@@ -99,6 +100,21 @@ const STATUS_ROWS: StatusRow[] = [
     label: "Moderation Reports",
     status: isModerationRealtimeMode() ? "ready" : "not-connected",
     detail: isModerationRealtimeMode() ? "Supabase reports/admin" : "demo preview",
+  },
+  {
+    label: "Supabase Housing Posts",
+    status: usesSupabaseHousing() ? "ready" : "not-connected",
+    detail: usesSupabaseHousing() ? "housing_posts table" : "demo catalog",
+  },
+  {
+    label: "Housing Image Upload",
+    status: usesSupabaseHousing() ? "ready" : "not-connected",
+    detail: usesSupabaseHousing() ? "housing-images bucket" : "not available in demo",
+  },
+  {
+    label: "Housing Reports",
+    status: isModerationRealtimeMode() ? "ready" : "not-connected",
+    detail: isModerationRealtimeMode() ? "housing_post target type" : "demo preview",
   },
   { label: "AI API", status: "not-connected" },
 ];

@@ -31,6 +31,9 @@ const optionalRoutes = [
   "marketplace/[listingId]/page.tsx",
   "sellers/[sellerId]/page.tsx",
   "saved/page.tsx",
+  "housing/new/page.tsx",
+  "housing/[housingId]/page.tsx",
+  "housing/[housingId]/edit/page.tsx",
   "sell/preview/page.tsx",
   "dev/error-demo/page.tsx",
 ];

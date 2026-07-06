@@ -1,4 +1,9 @@
-export type ReportTargetType = "listing" | "message" | "user" | "conversation";
+export type ReportTargetType =
+  | "listing"
+  | "message"
+  | "user"
+  | "conversation"
+  | "housing_post";
 export type ReportReason =
   | "spam"
   | "scam"
