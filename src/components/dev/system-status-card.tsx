@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 import { usesSupabaseHousing } from "@/lib/housing-mode";
+import { usesSupabaseLostFound } from "@/lib/lost-found-mode";
 import { usesSupabaseTutoring } from "@/lib/tutoring-mode";
 import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
 import { usesSupabaseSavedListings } from "@/lib/saved-listings-mode";
@@ -152,6 +153,28 @@ const STATUS_ROWS: StatusRow[] = [
     detail: usesSupabaseMessaging()
       ? "tutor_profile conversations"
       : "demo preview via msg-2",
+  },
+  {
+    label: "Supabase Lost & Found Posts",
+    status: usesSupabaseLostFound() ? "ready" : "not-connected",
+    detail: usesSupabaseLostFound() ? "lost_found_items table" : "demo catalog",
+  },
+  {
+    label: "Lost & Found Image Upload",
+    status: usesSupabaseLostFound() ? "ready" : "not-connected",
+    detail: usesSupabaseLostFound() ? "lost-found-images bucket" : "not available in demo",
+  },
+  {
+    label: "Lost & Found Reports",
+    status: isModerationRealtimeMode() ? "ready" : "not-connected",
+    detail: isModerationRealtimeMode() ? "lost_found_item target type" : "demo preview",
+  },
+  {
+    label: "Lost & Found Contact Messaging",
+    status: usesSupabaseMessaging() ? "ready" : "not-connected",
+    detail: usesSupabaseMessaging()
+      ? "lost_found_item conversations"
+      : "demo preview via msg-5",
   },
   { label: "AI API", status: "not-connected" },
 ];

@@ -60,7 +60,7 @@ type BuyerSellerIds = {
 };
 
 const CONVERSATION_SELECT =
-  "*, listings(id, title, status, seller_id), housing_posts(id, title, status, user_id), tutoring_profiles(id, display_name, status, user_id, subjects)";
+  "*, listings(id, title, status, seller_id), housing_posts(id, title, status, user_id), tutoring_profiles(id, display_name, status, user_id, subjects), lost_found_items(id, title, status, user_id)";
 
 function resolveBuyerSellerIds(
   row: ConversationRow,
@@ -68,6 +68,7 @@ function resolveBuyerSellerIds(
     listingSellerId?: string | null;
     housingPosterId?: string | null;
     tutorOwnerId?: string | null;
+    lostFoundPosterId?: string | null;
   }
 ): BuyerSellerIds {
   if (row.tutor_profile_id && options?.tutorOwnerId) {
@@ -81,6 +82,13 @@ function resolveBuyerSellerIds(
     return {
       buyerId: row.created_by,
       sellerId: options.housingPosterId,
+    };
+  }
+
+  if (row.lost_found_item_id && options?.lostFoundPosterId) {
+    return {
+      buyerId: row.created_by,
+      sellerId: options.lostFoundPosterId,
     };
   }
 
@@ -106,6 +114,7 @@ function getLastReadAtForUser(
     listingSellerId?: string | null;
     housingPosterId?: string | null;
     tutorOwnerId?: string | null;
+    lostFoundPosterId?: string | null;
   }
 ): string | null {
   const { buyerId, sellerId } = resolveBuyerSellerIds(row, options);
@@ -120,11 +129,13 @@ function getParticipantReadContext(
   listingSellerId: string | null;
   housingPosterId: string | null;
   tutorOwnerId: string | null;
+  lostFoundPosterId: string | null;
 } {
   return {
     listingSellerId: row.listings?.seller_id ?? null,
     housingPosterId: row.housing_posts?.user_id ?? null,
     tutorOwnerId: row.tutoring_profiles?.user_id ?? null,
+    lostFoundPosterId: row.lost_found_items?.user_id ?? null,
   };
 }
 
@@ -195,6 +206,24 @@ async function fetchTutorOwnerIds(
   return map;
 }
 
+async function fetchLostFoundPosterIds(
+  itemIds: string[]
+): Promise<Map<string, string>> {
+  const client = getSupabaseBrowserClient();
+  const map = new Map<string, string>();
+  if (!client || itemIds.length === 0) return map;
+
+  const { data } = await client
+    .from("lost_found_items")
+    .select("id, user_id")
+    .in("id", [...new Set(itemIds)]);
+
+  for (const row of data ?? []) {
+    map.set(row.id as string, row.user_id as string);
+  }
+  return map;
+}
+
 function tutorDisplayTitle(row: ConversationWithListingRow): string | null {
   if (!row.tutor_profile_id) return null;
   if (row.tutoring_profiles?.display_name?.trim()) {
@@ -203,6 +232,11 @@ function tutorDisplayTitle(row: ConversationWithListingRow): string | null {
   const firstSubject = row.tutoring_profiles?.subjects?.[0];
   if (firstSubject) return firstSubject;
   return "Tutor profile";
+}
+
+function lostFoundDisplayTitle(row: ConversationWithListingRow): string | null {
+  if (!row.lost_found_item_id) return null;
+  return row.lost_found_items?.title?.trim() || "Lost & Found item";
 }
 
 async function countUnreadMessagesForConversation(
@@ -392,6 +426,9 @@ export async function getMyConversations(userId: string): Promise<{
   const tutorOwnerIds = await fetchTutorOwnerIds(
     rows.map((row) => row.tutor_profile_id).filter((id): id is string => Boolean(id))
   );
+  const lostFoundPosterIds = await fetchLostFoundPosterIds(
+    rows.map((row) => row.lost_found_item_id).filter((id): id is string => Boolean(id))
+  );
 
   const conversationIds = rows.map((row) => row.id);
   const otherParticipantIds = rows.flatMap((row) =>
@@ -432,6 +469,9 @@ export async function getMyConversations(userId: string): Promise<{
       tutorOwnerId: row.tutor_profile_id
         ? tutorOwnerIds.get(row.tutor_profile_id) ?? row.tutoring_profiles?.user_id ?? null
         : null,
+      lostFoundPosterId: row.lost_found_item_id
+        ? lostFoundPosterIds.get(row.lost_found_item_id) ?? row.lost_found_items?.user_id ?? null
+        : null,
     };
     const lastReadAt = getLastReadAtForUser(row, userId, readContext);
     const unreadCount = countUnreadMessagesInThread(
@@ -445,6 +485,7 @@ export async function getMyConversations(userId: string): Promise<{
       listingTitle: row.listings?.title ?? null,
       housingTitle: row.housing_posts?.title ?? null,
       tutorTitle: tutorDisplayTitle(row),
+      lostFoundTitle: lostFoundDisplayTitle(row),
       lastMessage: latest?.body ?? null,
       unreadCount,
     });
@@ -518,6 +559,7 @@ export async function getConversation(
     listingTitle: row.listings?.title ?? null,
     housingTitle: row.housing_posts?.title ?? null,
     tutorTitle: tutorDisplayTitle(row),
+    lostFoundTitle: lostFoundDisplayTitle(row),
     lastMessage: latest?.body ?? null,
     unreadCount,
   });
@@ -742,6 +784,83 @@ export async function getOrCreateTutorConversation(
         .eq("tutor_profile_id", tutorProfileId)
         .eq("created_by", buyerId)
         .contains("participant_ids", [buyerId, tutorUserId])
+        .maybeSingle();
+      if (retry?.id) return { conversationId: retry.id as string };
+    }
+    return { conversationId: null, error: mapSupabaseError(createError) };
+  }
+
+  return { conversationId: created.id as string };
+}
+
+export async function getOrCreateLostFoundConversation(
+  itemId: string,
+  buyerId: string
+): Promise<{ conversationId: string | null; error?: string }> {
+  const client = getSupabaseBrowserClient();
+  if (!client) {
+    return { conversationId: null, error: "Supabase is not configured." };
+  }
+
+  const { data: lostFoundItem, error: itemError } = await client
+    .from("lost_found_items")
+    .select("id, user_id, status, title")
+    .eq("id", itemId)
+    .maybeSingle();
+
+  if (itemError) {
+    return { conversationId: null, error: mapSupabaseError(itemError) };
+  }
+
+  if (!lostFoundItem || lostFoundItem.status !== "active") {
+    return { conversationId: null, error: "This lost & found item is no longer available." };
+  }
+
+  const posterId = lostFoundItem.user_id as string;
+  if (posterId === buyerId) {
+    return {
+      conversationId: null,
+      error: "You cannot message yourself about your own lost & found item.",
+    };
+  }
+
+  const { data: existing, error: existingError } = await client
+    .from("conversations")
+    .select("id")
+    .eq("lost_found_item_id", itemId)
+    .eq("created_by", buyerId)
+    .contains("participant_ids", [buyerId, posterId])
+    .maybeSingle();
+
+  if (existingError) {
+    return { conversationId: null, error: mapSupabaseError(existingError) };
+  }
+
+  if (existing?.id) {
+    return { conversationId: existing.id as string };
+  }
+
+  const now = new Date().toISOString();
+  const { data: created, error: createError } = await client
+    .from("conversations")
+    .insert({
+      lost_found_item_id: itemId,
+      context_type: "lost_found_item",
+      created_by: buyerId,
+      participant_ids: [buyerId, posterId],
+      last_message_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (createError || !created) {
+    if (createError?.code === "23505") {
+      const { data: retry } = await client
+        .from("conversations")
+        .select("id")
+        .eq("lost_found_item_id", itemId)
+        .eq("created_by", buyerId)
+        .contains("participant_ids", [buyerId, posterId])
         .maybeSingle();
       if (retry?.id) return { conversationId: retry.id as string };
     }

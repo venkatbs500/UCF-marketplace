@@ -500,6 +500,82 @@ export const QA_CHECKLIST: QACheckSection[] = [
     ],
   },
   {
+    id: "lost-found-phase-1",
+    title: "Lost & Found Phase 1",
+    description: "Supabase-backed lost & found posts in real product mode.",
+    items: [
+      {
+        id: "lost-found-browse",
+        label: "Browse lost & found items",
+        steps: ["Visit /lost-found in real mode"],
+        expected:
+          "Active items from Supabase with lost/found filters, search, category, and location. Honest empty state when none exist.",
+        status: "manual",
+      },
+      {
+        id: "lost-found-create",
+        label: "Post lost/found item",
+        steps: ["Sign in", "Visit /lost-found/new", "Fill form and submit"],
+        expected:
+          "Row in lost_found_items. Images in lost-found-images bucket. Redirect to /lost-found/[id].",
+        status: "manual",
+      },
+      {
+        id: "lost-found-detail",
+        label: "Item detail page",
+        steps: ["Open /lost-found/[id] for an active item"],
+        expected:
+          "Images, type badge, description, category, location, date, safety guidance. Message poster for non-owners.",
+        status: "manual",
+      },
+      {
+        id: "lost-found-owner",
+        label: "Owner controls",
+        steps: ["Open your own lost/found item"],
+        expected:
+          "Your post badge, edit, mark resolved, delete. No report or message-self buttons.",
+        status: "manual",
+      },
+      {
+        id: "lost-found-message",
+        label: "Message poster",
+        steps: ["Sign in", "Open another user's item", "Click Message poster"],
+        expected:
+          "Creates lost_found_item conversation. /messages shows Lost & Found context with link back.",
+        status: "manual",
+      },
+      {
+        id: "lost-found-report",
+        label: "Report lost/found item",
+        steps: ["Report another user's item"],
+        expected: "Report saved with target_type lost_found_item. Visible in admin dashboard.",
+        status: "manual",
+      },
+      {
+        id: "lost-found-admin-remove",
+        label: "Admin remove lost/found item",
+        steps: ["As admin, open lost/found report", "Remove item"],
+        expected: "Item status set to removed. Hidden from public browse.",
+        status: "manual",
+      },
+    ],
+  },
+  {
+    id: "lost-found-actions",
+    title: "Lost & Found Actions (Demo)",
+    description: "Demo-mode lost & found browse and protected actions.",
+    items: [
+      {
+        id: "lost-found-contact",
+        label: "Message poster from detail",
+        steps: ["Visit /lost-found", "Open an item", "Click Message poster"],
+        expected:
+          "Signed out → /sign-in. Signed in → demo or Supabase conversation. No private email exposed.",
+        status: "manual",
+      },
+    ],
+  },
+  {
     id: "jobs-actions",
     title: "Jobs Actions",
     description: "Protected job applications.",
@@ -658,6 +734,14 @@ export const QA_CHECKLIST: QACheckSection[] = [
         steps: ["Run npm run e2e — tutoring.spec.ts"],
         expected:
           "Browse loads, become tutor CTA auth guard, Message tutor flow, demo detail, invalid id not-found pass.",
+        status: "automated",
+      },
+      {
+        id: "e2e-lost-found",
+        label: "Lost & Found E2E",
+        steps: ["Run npm run e2e — lost-found.spec.ts"],
+        expected:
+          "Browse loads, post CTA auth guard, Message poster flow, demo detail, invalid id not-found pass.",
         status: "automated",
       },
     ],
@@ -885,6 +969,14 @@ export const QA_CHECKLIST: QACheckSection[] = [
         steps: ["Visit /tutoring in real mode"],
         expected:
           "No Sam Patel, Mia Chen, or other mock tutors. Empty state with Coming soon CTA.",
+        status: "manual",
+      },
+      {
+        id: "dh-lost-found-real",
+        label: "Real mode lost & found has no fake items",
+        steps: ["Visit /lost-found in real mode"],
+        expected:
+          "No mock lost/found cards. Honest empty state with post CTA.",
         status: "manual",
       },
       {

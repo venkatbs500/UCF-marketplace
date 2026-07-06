@@ -1172,6 +1172,15 @@ export const messagePreviews: MessagePreview[] = [
     context: "General",
     contextType: "general",
   },
+  {
+    id: "msg-5",
+    participant: users[5],
+    lastMessage: "I think I found your ID — can you describe the lanyard?",
+    timestamp: "2025-06-22T16:00:00",
+    unread: false,
+    context: "UCF Student ID — Alex M.",
+    contextType: "lost-found",
+  },
 ];
 
 export const myListings = listings.filter((l) => l.sellerId === "seller-5");

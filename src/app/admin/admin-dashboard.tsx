@@ -122,6 +122,15 @@ export function AdminDashboard() {
     await runStatusUpdate(report.id, "resolved");
   };
 
+  const runHideLostFoundItem = async (report: ReportItem) => {
+    const result = await service.hideLostFoundItemForModeration(report.targetId);
+    if (!result.success) {
+      setError(result.error ?? "We could not remove this lost & found item.");
+      return;
+    }
+    await runStatusUpdate(report.id, "resolved");
+  };
+
   return (
     <>
       <div className="mb-4 flex items-center gap-2">
@@ -305,6 +314,23 @@ export function AdminDashboard() {
                       }
                     >
                       Remove tutor profile
+                    </Button>
+                  )}
+                  {report.targetType === "lost_found_item" && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() =>
+                        void askConfirm({
+                          title: "Remove lost & found item?",
+                          description:
+                            "This will set the item status to removed and hide it from browse.",
+                          onConfirm: () => void runHideLostFoundItem(report),
+                          destructive: true,
+                        })
+                      }
+                    >
+                      Remove lost & found item
                     </Button>
                   )}
                 </div>

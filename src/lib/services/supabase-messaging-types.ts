@@ -4,6 +4,7 @@ export type ConversationContextType =
   | "marketplace_listing"
   | "housing_post"
   | "tutor_profile"
+  | "lost_found_item"
   | "unknown";
 
 export type ConversationRow = {
@@ -11,6 +12,7 @@ export type ConversationRow = {
   listing_id: string | null;
   housing_post_id: string | null;
   tutor_profile_id: string | null;
+  lost_found_item_id?: string | null;
   context_type?: string | null;
   created_by: string;
   participant_ids: string[];
@@ -45,6 +47,12 @@ export type ConversationWithListingRow = ConversationRow & {
     user_id?: string;
     subjects?: string[] | null;
   } | null;
+  lost_found_items?: {
+    id: string;
+    title: string;
+    status: string;
+    user_id?: string;
+  } | null;
 };
 
 export type ConversationContext = {
@@ -61,6 +69,7 @@ export function getConversationContext(
     listingTitle?: string | null;
     housingTitle?: string | null;
     tutorTitle?: string | null;
+    lostFoundTitle?: string | null;
   }
 ): ConversationContext {
   if (row.tutor_profile_id) {
@@ -80,6 +89,16 @@ export function getConversationContext(
       contextId: row.housing_post_id,
       contextHref: `/housing/${row.housing_post_id}`,
       contextLabel: "Housing",
+    };
+  }
+
+  if (row.lost_found_item_id) {
+    return {
+      contextType: "lost_found_item",
+      contextTitle: options?.lostFoundTitle ?? null,
+      contextId: row.lost_found_item_id,
+      contextHref: `/lost-found/${row.lost_found_item_id}`,
+      contextLabel: "Lost & Found",
     };
   }
 
@@ -189,6 +208,7 @@ export function mapConversationRowToPreview(
     listingTitle?: string | null;
     housingTitle?: string | null;
     tutorTitle?: string | null;
+    lostFoundTitle?: string | null;
     lastMessage?: string | null;
     unreadCount?: number;
   }
@@ -200,6 +220,7 @@ export function mapConversationRowToPreview(
     listingTitle: options.listingTitle,
     housingTitle: options.housingTitle,
     tutorTitle: options.tutorTitle,
+    lostFoundTitle: options.lostFoundTitle,
   });
 
   return {
