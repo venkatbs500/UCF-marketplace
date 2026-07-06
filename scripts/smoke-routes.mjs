@@ -43,6 +43,9 @@ const optionalRoutes = [
   "jobs/new/page.tsx",
   "jobs/[jobId]/page.tsx",
   "jobs/[jobId]/edit/page.tsx",
+  "events/new/page.tsx",
+  "events/[eventId]/page.tsx",
+  "events/[eventId]/edit/page.tsx",
   "sell/preview/page.tsx",
   "dev/error-demo/page.tsx",
 ];

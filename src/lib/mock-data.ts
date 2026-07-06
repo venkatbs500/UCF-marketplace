@@ -1190,6 +1190,15 @@ export const messagePreviews: MessagePreview[] = [
     context: "Campus Tour Guide",
     contextType: "jobs",
   },
+  {
+    id: "msg-7",
+    participant: users[2],
+    lastMessage: "Is Knight Hacks open to first-time hackers?",
+    timestamp: "2025-06-20T18:15:00",
+    unread: false,
+    context: "Knight Hacks 2025",
+    contextType: "events",
+  },
 ];
 
 export const myListings = listings.filter((l) => l.sellerId === "seller-5");

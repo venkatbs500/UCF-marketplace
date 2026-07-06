@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 import { usesSupabaseHousing } from "@/lib/housing-mode";
 import { usesSupabaseJobs } from "@/lib/jobs-mode";
+import { usesSupabaseEvents } from "@/lib/events-mode";
 import { usesSupabaseLostFound } from "@/lib/lost-found-mode";
 import { usesSupabaseTutoring } from "@/lib/tutoring-mode";
 import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
@@ -198,6 +199,33 @@ const STATUS_ROWS: StatusRow[] = [
     detail: usesSupabaseMessaging()
       ? "campus_job conversations"
       : "demo preview via msg-6",
+  },
+  {
+    label: "Supabase Campus Events",
+    status: usesSupabaseEvents() ? "ready" : "not-connected",
+    detail: usesSupabaseEvents() ? "campus_events table" : "demo catalog",
+  },
+  {
+    label: "Campus Event Posting",
+    status: usesSupabaseEvents() ? "ready" : "not-connected",
+    detail: usesSupabaseEvents() ? "create/edit/cancel/delete" : "demo preview only",
+  },
+  {
+    label: "Campus Event Image Upload",
+    status: usesSupabaseEvents() ? "ready" : "not-connected",
+    detail: usesSupabaseEvents() ? "event-images bucket" : "demo preview only",
+  },
+  {
+    label: "Campus Event Reports",
+    status: isModerationRealtimeMode() ? "ready" : "not-connected",
+    detail: isModerationRealtimeMode() ? "campus_event target type" : "demo preview",
+  },
+  {
+    label: "Campus Event Organizer Messaging",
+    status: usesSupabaseMessaging() ? "ready" : "not-connected",
+    detail: usesSupabaseMessaging()
+      ? "campus_event conversations"
+      : "demo preview via msg-7",
   },
   { label: "AI API", status: "not-connected" },
 ];

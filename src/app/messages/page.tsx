@@ -29,6 +29,7 @@ function demoContextLabel(contextType: MessagePreview["contextType"]): string {
   if (contextType === "tutoring") return "Tutoring";
   if (contextType === "lost-found") return "Lost & Found";
   if (contextType === "jobs") return "Jobs";
+  if (contextType === "events") return "Events";
   return "General";
 }
 

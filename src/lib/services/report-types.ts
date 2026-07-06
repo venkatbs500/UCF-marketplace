@@ -6,7 +6,8 @@ export type ReportTargetType =
   | "housing_post"
   | "tutor_profile"
   | "lost_found_item"
-  | "campus_job";
+  | "campus_job"
+  | "campus_event";
 export type ReportReason =
   | "spam"
   | "scam"

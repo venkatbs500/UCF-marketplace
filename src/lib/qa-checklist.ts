@@ -650,15 +650,77 @@ export const QA_CHECKLIST: QACheckSection[] = [
     ],
   },
   {
-    id: "events-actions",
-    title: "Events Actions",
-    description: "Protected event RSVP.",
+    id: "events-phase-1",
+    title: "Events Phase 1",
+    description: "Supabase-backed campus events in real product mode.",
     items: [
       {
-        id: "event-rsvp",
-        label: "RSVP to event",
-        steps: ["Visit /events", "Click RSVP"],
-        expected: "Signed out → /sign-in. Onboarded → honest coming-soon message.",
+        id: "events-browse",
+        label: "Browse campus events",
+        steps: ["Visit /events in real mode"],
+        expected:
+          "Active upcoming events from Supabase with type, search, location, and date filters. Honest empty state when none exist.",
+        status: "manual",
+      },
+      {
+        id: "events-create",
+        label: "Post an event",
+        steps: ["Sign in", "Visit /events/new", "Fill form and submit"],
+        expected:
+          "Row in campus_events. Images in event-images bucket. Redirect to /events/[id].",
+        status: "manual",
+      },
+      {
+        id: "events-detail",
+        label: "Event detail page",
+        steps: ["Open /events/[id] for an active event"],
+        expected:
+          "Gallery, title, type, date/time, location, description, external URL with safety copy. Message organizer for non-owners.",
+        status: "manual",
+      },
+      {
+        id: "events-owner",
+        label: "Owner controls",
+        steps: ["Open your own event"],
+        expected:
+          "Your event badge, edit, mark cancelled, delete. No report or message-self buttons.",
+        status: "manual",
+      },
+      {
+        id: "events-message",
+        label: "Message organizer",
+        steps: ["Sign in", "Open another user's event", "Click Message organizer"],
+        expected:
+          "Creates campus_event conversation. /messages shows Events context with link back.",
+        status: "manual",
+      },
+      {
+        id: "events-report",
+        label: "Report event",
+        steps: ["Report another user's event"],
+        expected: "Report saved with target_type campus_event. Visible in admin dashboard.",
+        status: "manual",
+      },
+      {
+        id: "events-admin-remove",
+        label: "Admin remove event",
+        steps: ["As admin, open event report", "Remove event"],
+        expected: "Event status set to removed. Hidden from public browse.",
+        status: "manual",
+      },
+    ],
+  },
+  {
+    id: "events-actions",
+    title: "Events Actions (Demo)",
+    description: "Demo-mode events browse and protected actions.",
+    items: [
+      {
+        id: "event-contact",
+        label: "Message organizer from detail",
+        steps: ["Visit /events", "Open an event card", "Click Message organizer"],
+        expected:
+          "Signed out → /sign-in. Signed in → demo or Supabase conversation. External links show safety copy.",
         status: "manual",
       },
     ],
@@ -810,6 +872,14 @@ export const QA_CHECKLIST: QACheckSection[] = [
         steps: ["Run npm run e2e — jobs.spec.ts"],
         expected:
           "Browse loads, post CTA auth guard, Message poster flow, demo detail, invalid id not-found pass.",
+        status: "automated",
+      },
+      {
+        id: "e2e-events",
+        label: "Events E2E",
+        steps: ["Run npm run e2e — events.spec.ts"],
+        expected:
+          "Browse loads, post CTA auth guard, Message organizer flow, demo detail, invalid id not-found pass.",
         status: "automated",
       },
     ],
@@ -1053,6 +1123,14 @@ export const QA_CHECKLIST: QACheckSection[] = [
         steps: ["Visit /jobs in real mode"],
         expected:
           "No mock campus job cards. Honest empty state with post CTA.",
+        status: "manual",
+      },
+      {
+        id: "dh-events-real",
+        label: "Real mode events has no fake listings",
+        steps: ["Visit /events in real mode"],
+        expected:
+          "No mock event cards, attendee counts, or RSVP buttons. Honest empty state with post CTA.",
         status: "manual",
       },
       {

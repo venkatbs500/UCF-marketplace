@@ -6,6 +6,7 @@ export type ConversationContextType =
   | "tutor_profile"
   | "lost_found_item"
   | "campus_job"
+  | "campus_event"
   | "unknown";
 
 export type ConversationRow = {
@@ -15,6 +16,7 @@ export type ConversationRow = {
   tutor_profile_id: string | null;
   lost_found_item_id?: string | null;
   campus_job_id?: string | null;
+  campus_event_id?: string | null;
   context_type?: string | null;
   created_by: string;
   participant_ids: string[];
@@ -61,6 +63,12 @@ export type ConversationWithListingRow = ConversationRow & {
     status: string;
     posted_by?: string;
   } | null;
+  campus_events?: {
+    id: string;
+    title: string;
+    status: string;
+    posted_by?: string;
+  } | null;
 };
 
 export type ConversationContext = {
@@ -79,6 +87,7 @@ export function getConversationContext(
     tutorTitle?: string | null;
     lostFoundTitle?: string | null;
     campusJobTitle?: string | null;
+    campusEventTitle?: string | null;
   }
 ): ConversationContext {
   if (row.tutor_profile_id) {
@@ -118,6 +127,16 @@ export function getConversationContext(
       contextId: row.campus_job_id,
       contextHref: `/jobs/${row.campus_job_id}`,
       contextLabel: "Jobs",
+    };
+  }
+
+  if (row.campus_event_id) {
+    return {
+      contextType: "campus_event",
+      contextTitle: options?.campusEventTitle ?? null,
+      contextId: row.campus_event_id,
+      contextHref: `/events/${row.campus_event_id}`,
+      contextLabel: "Events",
     };
   }
 
@@ -229,6 +248,7 @@ export function mapConversationRowToPreview(
     tutorTitle?: string | null;
     lostFoundTitle?: string | null;
     campusJobTitle?: string | null;
+    campusEventTitle?: string | null;
     lastMessage?: string | null;
     unreadCount?: number;
   }
@@ -242,6 +262,7 @@ export function mapConversationRowToPreview(
     tutorTitle: options.tutorTitle,
     lostFoundTitle: options.lostFoundTitle,
     campusJobTitle: options.campusJobTitle,
+    campusEventTitle: options.campusEventTitle,
   });
 
   return {

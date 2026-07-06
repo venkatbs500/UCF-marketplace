@@ -140,6 +140,15 @@ export function AdminDashboard() {
     await runStatusUpdate(report.id, "resolved");
   };
 
+  const runHideCampusEvent = async (report: ReportItem) => {
+    const result = await service.hideCampusEventForModeration(report.targetId);
+    if (!result.success) {
+      setError(result.error ?? "We could not remove this event.");
+      return;
+    }
+    await runStatusUpdate(report.id, "resolved");
+  };
+
   return (
     <>
       <div className="mb-4 flex items-center gap-2">
@@ -357,6 +366,23 @@ export function AdminDashboard() {
                       }
                     >
                       Remove job post
+                    </Button>
+                  )}
+                  {report.targetType === "campus_event" && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() =>
+                        void askConfirm({
+                          title: "Remove event?",
+                          description:
+                            "This will set the event status to removed and hide it from browse.",
+                          onConfirm: () => void runHideCampusEvent(report),
+                          destructive: true,
+                        })
+                      }
+                    >
+                      Remove event
                     </Button>
                   )}
                 </div>
