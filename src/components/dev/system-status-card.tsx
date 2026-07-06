@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 import { usesSupabaseHousing } from "@/lib/housing-mode";
+import { usesSupabaseJobs } from "@/lib/jobs-mode";
 import { usesSupabaseLostFound } from "@/lib/lost-found-mode";
 import { usesSupabaseTutoring } from "@/lib/tutoring-mode";
 import { usesSupabaseMarketplace } from "@/lib/marketplace-mode";
@@ -175,6 +176,28 @@ const STATUS_ROWS: StatusRow[] = [
     detail: usesSupabaseMessaging()
       ? "lost_found_item conversations"
       : "demo preview via msg-5",
+  },
+  {
+    label: "Supabase Campus Jobs",
+    status: usesSupabaseJobs() ? "ready" : "not-connected",
+    detail: usesSupabaseJobs() ? "campus_jobs table" : "demo catalog",
+  },
+  {
+    label: "Campus Job Posting",
+    status: usesSupabaseJobs() ? "ready" : "not-connected",
+    detail: usesSupabaseJobs() ? "create/edit/close/delete" : "demo preview only",
+  },
+  {
+    label: "Campus Job Reports",
+    status: isModerationRealtimeMode() ? "ready" : "not-connected",
+    detail: isModerationRealtimeMode() ? "campus_job target type" : "demo preview",
+  },
+  {
+    label: "Campus Job Contact Messaging",
+    status: usesSupabaseMessaging() ? "ready" : "not-connected",
+    detail: usesSupabaseMessaging()
+      ? "campus_job conversations"
+      : "demo preview via msg-6",
   },
   { label: "AI API", status: "not-connected" },
 ];

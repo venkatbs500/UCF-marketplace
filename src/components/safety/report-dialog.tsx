@@ -29,6 +29,7 @@ function titleForTarget(targetType: ReportTargetType): string {
   if (targetType === "housing_post") return "Report housing post";
   if (targetType === "tutor_profile") return "Report tutor profile";
   if (targetType === "lost_found_item") return "Report lost & found item";
+  if (targetType === "campus_job") return "Report job post";
   return "Report conversation";
 }
 

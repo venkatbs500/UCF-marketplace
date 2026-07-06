@@ -30,6 +30,9 @@ export type ReportService = {
   hideLostFoundItemForModeration: (
     itemId: string
   ) => Promise<{ success: boolean; error?: string }>;
+  hideCampusJobForModeration: (
+    jobId: string
+  ) => Promise<{ success: boolean; error?: string }>;
 };
 
 function isSupabaseModerationMode(): boolean {
@@ -62,6 +65,9 @@ const mockReportService: ReportService = {
     return { success: true };
   },
   async hideLostFoundItemForModeration() {
+    return { success: true };
+  },
+  async hideCampusJobForModeration() {
     return { success: true };
   },
 };

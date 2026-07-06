@@ -1181,6 +1181,15 @@ export const messagePreviews: MessagePreview[] = [
     context: "UCF Student ID — Alex M.",
     contextType: "lost-found",
   },
+  {
+    id: "msg-6",
+    participant: users[1],
+    lastMessage: "Are weekend tour guide shifts still open?",
+    timestamp: "2025-06-21T11:30:00",
+    unread: false,
+    context: "Campus Tour Guide",
+    contextType: "jobs",
+  },
 ];
 
 export const myListings = listings.filter((l) => l.sellerId === "seller-5");

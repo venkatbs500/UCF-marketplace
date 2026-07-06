@@ -306,5 +306,5 @@ export type MessagePreview = {
   timestamp: string;
   unread: boolean;
   context: string;
-  contextType: "listing" | "tutoring" | "housing" | "lost-found" | "general";
+  contextType: "listing" | "tutoring" | "housing" | "lost-found" | "jobs" | "general";
 };

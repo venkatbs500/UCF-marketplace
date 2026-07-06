@@ -197,6 +197,19 @@ export async function hideLostFoundItemForModeration(
   return { success: true };
 }
 
+export async function hideCampusJobForModeration(
+  jobId: string
+): Promise<{ success: boolean; error?: string }> {
+  const client = getSupabaseBrowserClient();
+  if (!client) return { success: false, error: "Supabase is not configured." };
+  const { error } = await client
+    .from("campus_jobs")
+    .update({ status: "removed" })
+    .eq("id", jobId);
+  if (error) return { success: false, error: mapSupabaseError(error) };
+  return { success: true };
+}
+
 export const supabaseReportService = {
   createReport,
   getMyReports,
@@ -207,4 +220,5 @@ export const supabaseReportService = {
   hideHousingPostForModeration,
   hideTutorProfileForModeration,
   hideLostFoundItemForModeration,
+  hideCampusJobForModeration,
 };

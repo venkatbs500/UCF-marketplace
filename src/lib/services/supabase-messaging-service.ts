@@ -60,7 +60,7 @@ type BuyerSellerIds = {
 };
 
 const CONVERSATION_SELECT =
-  "*, listings(id, title, status, seller_id), housing_posts(id, title, status, user_id), tutoring_profiles(id, display_name, status, user_id, subjects), lost_found_items(id, title, status, user_id)";
+  "*, listings(id, title, status, seller_id), housing_posts(id, title, status, user_id), tutoring_profiles(id, display_name, status, user_id, subjects), lost_found_items(id, title, status, user_id), campus_jobs(id, title, status, posted_by)";
 
 function resolveBuyerSellerIds(
   row: ConversationRow,
@@ -69,6 +69,7 @@ function resolveBuyerSellerIds(
     housingPosterId?: string | null;
     tutorOwnerId?: string | null;
     lostFoundPosterId?: string | null;
+    campusJobPosterId?: string | null;
   }
 ): BuyerSellerIds {
   if (row.tutor_profile_id && options?.tutorOwnerId) {
@@ -89,6 +90,13 @@ function resolveBuyerSellerIds(
     return {
       buyerId: row.created_by,
       sellerId: options.lostFoundPosterId,
+    };
+  }
+
+  if (row.campus_job_id && options?.campusJobPosterId) {
+    return {
+      buyerId: row.created_by,
+      sellerId: options.campusJobPosterId,
     };
   }
 
@@ -115,6 +123,7 @@ function getLastReadAtForUser(
     housingPosterId?: string | null;
     tutorOwnerId?: string | null;
     lostFoundPosterId?: string | null;
+    campusJobPosterId?: string | null;
   }
 ): string | null {
   const { buyerId, sellerId } = resolveBuyerSellerIds(row, options);
@@ -130,12 +139,14 @@ function getParticipantReadContext(
   housingPosterId: string | null;
   tutorOwnerId: string | null;
   lostFoundPosterId: string | null;
+  campusJobPosterId: string | null;
 } {
   return {
     listingSellerId: row.listings?.seller_id ?? null,
     housingPosterId: row.housing_posts?.user_id ?? null,
     tutorOwnerId: row.tutoring_profiles?.user_id ?? null,
     lostFoundPosterId: row.lost_found_items?.user_id ?? null,
+    campusJobPosterId: row.campus_jobs?.posted_by ?? null,
   };
 }
 
@@ -224,6 +235,24 @@ async function fetchLostFoundPosterIds(
   return map;
 }
 
+async function fetchCampusJobPosterIds(
+  jobIds: string[]
+): Promise<Map<string, string>> {
+  const client = getSupabaseBrowserClient();
+  const map = new Map<string, string>();
+  if (!client || jobIds.length === 0) return map;
+
+  const { data } = await client
+    .from("campus_jobs")
+    .select("id, posted_by")
+    .in("id", [...new Set(jobIds)]);
+
+  for (const row of data ?? []) {
+    map.set(row.id as string, row.posted_by as string);
+  }
+  return map;
+}
+
 function tutorDisplayTitle(row: ConversationWithListingRow): string | null {
   if (!row.tutor_profile_id) return null;
   if (row.tutoring_profiles?.display_name?.trim()) {
@@ -237,6 +266,11 @@ function tutorDisplayTitle(row: ConversationWithListingRow): string | null {
 function lostFoundDisplayTitle(row: ConversationWithListingRow): string | null {
   if (!row.lost_found_item_id) return null;
   return row.lost_found_items?.title?.trim() || "Lost & Found item";
+}
+
+function campusJobDisplayTitle(row: ConversationWithListingRow): string | null {
+  if (!row.campus_job_id) return null;
+  return row.campus_jobs?.title?.trim() || "Campus job";
 }
 
 async function countUnreadMessagesForConversation(
@@ -429,6 +463,9 @@ export async function getMyConversations(userId: string): Promise<{
   const lostFoundPosterIds = await fetchLostFoundPosterIds(
     rows.map((row) => row.lost_found_item_id).filter((id): id is string => Boolean(id))
   );
+  const campusJobPosterIds = await fetchCampusJobPosterIds(
+    rows.map((row) => row.campus_job_id).filter((id): id is string => Boolean(id))
+  );
 
   const conversationIds = rows.map((row) => row.id);
   const otherParticipantIds = rows.flatMap((row) =>
@@ -472,6 +509,9 @@ export async function getMyConversations(userId: string): Promise<{
       lostFoundPosterId: row.lost_found_item_id
         ? lostFoundPosterIds.get(row.lost_found_item_id) ?? row.lost_found_items?.user_id ?? null
         : null,
+      campusJobPosterId: row.campus_job_id
+        ? campusJobPosterIds.get(row.campus_job_id) ?? row.campus_jobs?.posted_by ?? null
+        : null,
     };
     const lastReadAt = getLastReadAtForUser(row, userId, readContext);
     const unreadCount = countUnreadMessagesInThread(
@@ -486,6 +526,7 @@ export async function getMyConversations(userId: string): Promise<{
       housingTitle: row.housing_posts?.title ?? null,
       tutorTitle: tutorDisplayTitle(row),
       lostFoundTitle: lostFoundDisplayTitle(row),
+      campusJobTitle: campusJobDisplayTitle(row),
       lastMessage: latest?.body ?? null,
       unreadCount,
     });
@@ -560,6 +601,7 @@ export async function getConversation(
     housingTitle: row.housing_posts?.title ?? null,
     tutorTitle: tutorDisplayTitle(row),
     lostFoundTitle: lostFoundDisplayTitle(row),
+    campusJobTitle: campusJobDisplayTitle(row),
     lastMessage: latest?.body ?? null,
     unreadCount,
   });
@@ -859,6 +901,83 @@ export async function getOrCreateLostFoundConversation(
         .from("conversations")
         .select("id")
         .eq("lost_found_item_id", itemId)
+        .eq("created_by", buyerId)
+        .contains("participant_ids", [buyerId, posterId])
+        .maybeSingle();
+      if (retry?.id) return { conversationId: retry.id as string };
+    }
+    return { conversationId: null, error: mapSupabaseError(createError) };
+  }
+
+  return { conversationId: created.id as string };
+}
+
+export async function getOrCreateCampusJobConversation(
+  jobId: string,
+  buyerId: string
+): Promise<{ conversationId: string | null; error?: string }> {
+  const client = getSupabaseBrowserClient();
+  if (!client) {
+    return { conversationId: null, error: "Supabase is not configured." };
+  }
+
+  const { data: campusJob, error: jobError } = await client
+    .from("campus_jobs")
+    .select("id, posted_by, status, title")
+    .eq("id", jobId)
+    .maybeSingle();
+
+  if (jobError) {
+    return { conversationId: null, error: mapSupabaseError(jobError) };
+  }
+
+  if (!campusJob || campusJob.status !== "active") {
+    return { conversationId: null, error: "This job is no longer available." };
+  }
+
+  const posterId = campusJob.posted_by as string;
+  if (posterId === buyerId) {
+    return {
+      conversationId: null,
+      error: "You cannot message yourself about your own job post.",
+    };
+  }
+
+  const { data: existing, error: existingError } = await client
+    .from("conversations")
+    .select("id")
+    .eq("campus_job_id", jobId)
+    .eq("created_by", buyerId)
+    .contains("participant_ids", [buyerId, posterId])
+    .maybeSingle();
+
+  if (existingError) {
+    return { conversationId: null, error: mapSupabaseError(existingError) };
+  }
+
+  if (existing?.id) {
+    return { conversationId: existing.id as string };
+  }
+
+  const now = new Date().toISOString();
+  const { data: created, error: createError } = await client
+    .from("conversations")
+    .insert({
+      campus_job_id: jobId,
+      context_type: "campus_job",
+      created_by: buyerId,
+      participant_ids: [buyerId, posterId],
+      last_message_at: now,
+    })
+    .select("id")
+    .single();
+
+  if (createError || !created) {
+    if (createError?.code === "23505") {
+      const { data: retry } = await client
+        .from("conversations")
+        .select("id")
+        .eq("campus_job_id", jobId)
         .eq("created_by", buyerId)
         .contains("participant_ids", [buyerId, posterId])
         .maybeSingle();

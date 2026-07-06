@@ -40,6 +40,9 @@ const optionalRoutes = [
   "lost-found/new/page.tsx",
   "lost-found/[itemId]/page.tsx",
   "lost-found/[itemId]/edit/page.tsx",
+  "jobs/new/page.tsx",
+  "jobs/[jobId]/page.tsx",
+  "jobs/[jobId]/edit/page.tsx",
   "sell/preview/page.tsx",
   "dev/error-demo/page.tsx",
 ];

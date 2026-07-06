@@ -576,15 +576,75 @@ export const QA_CHECKLIST: QACheckSection[] = [
     ],
   },
   {
-    id: "jobs-actions",
-    title: "Jobs Actions",
-    description: "Protected job applications.",
+    id: "jobs-phase-1",
+    title: "Jobs Phase 1",
+    description: "Supabase-backed campus jobs in real product mode.",
     items: [
       {
-        id: "job-apply",
-        label: "Apply to job",
-        steps: ["Visit /jobs", "Click Apply"],
-        expected: "Signed out → /sign-in. Onboarded → honest coming-soon message.",
+        id: "jobs-browse",
+        label: "Browse campus jobs",
+        steps: ["Visit /jobs in real mode"],
+        expected:
+          "Active jobs from Supabase with type, search, location, and remote filters. Honest empty state when none exist.",
+        status: "manual",
+      },
+      {
+        id: "jobs-create",
+        label: "Post a job",
+        steps: ["Sign in", "Visit /jobs/new", "Fill form and submit"],
+        expected: "Row in campus_jobs. Redirect to /jobs/[id].",
+        status: "manual",
+      },
+      {
+        id: "jobs-detail",
+        label: "Job detail page",
+        steps: ["Open /jobs/[id] for an active job"],
+        expected:
+          "Title, organization, type, pay, location, description, requirements, application link if provided. Message poster for non-owners.",
+        status: "manual",
+      },
+      {
+        id: "jobs-owner",
+        label: "Owner controls",
+        steps: ["Open your own job post"],
+        expected: "Your post badge, edit, mark closed, delete. No report or message-self buttons.",
+        status: "manual",
+      },
+      {
+        id: "jobs-message",
+        label: "Message poster",
+        steps: ["Sign in", "Open another user's job", "Click Message poster"],
+        expected:
+          "Creates campus_job conversation. /messages shows Jobs context with link back.",
+        status: "manual",
+      },
+      {
+        id: "jobs-report",
+        label: "Report job post",
+        steps: ["Report another user's job"],
+        expected: "Report saved with target_type campus_job. Visible in admin dashboard.",
+        status: "manual",
+      },
+      {
+        id: "jobs-admin-remove",
+        label: "Admin remove job post",
+        steps: ["As admin, open job report", "Remove job post"],
+        expected: "Job status set to removed. Hidden from public browse.",
+        status: "manual",
+      },
+    ],
+  },
+  {
+    id: "jobs-actions",
+    title: "Jobs Actions (Demo)",
+    description: "Demo-mode jobs browse and protected actions.",
+    items: [
+      {
+        id: "job-contact",
+        label: "Message poster from detail",
+        steps: ["Visit /jobs", "Open a job card", "Click Message poster"],
+        expected:
+          "Signed out → /sign-in. Signed in → demo or Supabase conversation. External application links show safety copy.",
         status: "manual",
       },
     ],
@@ -740,6 +800,14 @@ export const QA_CHECKLIST: QACheckSection[] = [
         id: "e2e-lost-found",
         label: "Lost & Found E2E",
         steps: ["Run npm run e2e — lost-found.spec.ts"],
+        expected:
+          "Browse loads, post CTA auth guard, Message poster flow, demo detail, invalid id not-found pass.",
+        status: "automated",
+      },
+      {
+        id: "e2e-jobs",
+        label: "Jobs E2E",
+        steps: ["Run npm run e2e — jobs.spec.ts"],
         expected:
           "Browse loads, post CTA auth guard, Message poster flow, demo detail, invalid id not-found pass.",
         status: "automated",
@@ -977,6 +1045,14 @@ export const QA_CHECKLIST: QACheckSection[] = [
         steps: ["Visit /lost-found in real mode"],
         expected:
           "No mock lost/found cards. Honest empty state with post CTA.",
+        status: "manual",
+      },
+      {
+        id: "dh-jobs-real",
+        label: "Real mode jobs has no fake listings",
+        steps: ["Visit /jobs in real mode"],
+        expected:
+          "No mock campus job cards. Honest empty state with post CTA.",
         status: "manual",
       },
       {

@@ -131,6 +131,15 @@ export function AdminDashboard() {
     await runStatusUpdate(report.id, "resolved");
   };
 
+  const runHideCampusJob = async (report: ReportItem) => {
+    const result = await service.hideCampusJobForModeration(report.targetId);
+    if (!result.success) {
+      setError(result.error ?? "We could not remove this job post.");
+      return;
+    }
+    await runStatusUpdate(report.id, "resolved");
+  };
+
   return (
     <>
       <div className="mb-4 flex items-center gap-2">
@@ -331,6 +340,23 @@ export function AdminDashboard() {
                       }
                     >
                       Remove lost & found item
+                    </Button>
+                  )}
+                  {report.targetType === "campus_job" && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() =>
+                        void askConfirm({
+                          title: "Remove job post?",
+                          description:
+                            "This will set the job status to removed and hide it from browse.",
+                          onConfirm: () => void runHideCampusJob(report),
+                          destructive: true,
+                        })
+                      }
+                    >
+                      Remove job post
                     </Button>
                   )}
                 </div>
