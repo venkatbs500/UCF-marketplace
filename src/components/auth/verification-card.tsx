@@ -34,6 +34,8 @@ export function VerificationCard() {
     }
   };
 
+  const emailDisplay = pendingEmail ?? "your UCF email";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -50,17 +52,15 @@ export function VerificationCard() {
           {authMode === "supabase" ? (
             <>
               We sent a secure sign-in link to{" "}
-              <span className="font-medium text-foreground">
-                {pendingEmail ?? "your UCF email"}
+              <span className="font-medium text-foreground" data-testid="magic-link-email">
+                {emailDisplay}
               </span>
               .
             </>
           ) : (
             <>
               We sent a 6-digit code to{" "}
-              <span className="font-medium text-foreground">
-                {pendingEmail ?? "your UCF email"}
-              </span>
+              <span className="font-medium text-foreground">{emailDisplay}</span>
             </>
           )}
         </p>
@@ -74,16 +74,24 @@ export function VerificationCard() {
           </Badge>
 
           {authMode === "supabase" ? (
-            <div className="space-y-4">
-              <p className="rounded-xl border border-gold/30 bg-gold/10 px-3 py-2 text-sm text-foreground/90">
-                We sent a secure sign-in link to your UCF email. Click the link in your email to
-                continue.
-              </p>
+            <div className="space-y-4" data-testid="magic-link-instructions">
+              <div className="space-y-2 rounded-xl border border-gold/30 bg-gold/10 px-3 py-3 text-sm text-foreground/90">
+                <p>
+                  Open the secure sign-in link we sent to{" "}
+                  <span className="font-medium">{emailDisplay}</span>.
+                </p>
+                <p>Open the link on the same device and browser when possible.</p>
+                <p>
+                  If the link opens Knight Market but does not sign you in, request a fresh link
+                  below.
+                </p>
+                <p>Check your spam or junk folder if you do not see the email within a minute.</p>
+              </div>
               <Link
                 href="/sign-in"
                 className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full")}
               >
-                Back to sign-in
+                Request a new sign-in link
               </Link>
             </div>
           ) : (

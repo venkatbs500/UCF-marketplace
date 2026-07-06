@@ -50,6 +50,8 @@ const optionalRoutes = [
   "discounts/[discountId]/page.tsx",
   "discounts/[discountId]/edit/page.tsx",
   "sell/preview/page.tsx",
+  "auth/callback/page.tsx",
+  "auth/post-login/page.tsx",
   "dev/error-demo/page.tsx",
 ];
 

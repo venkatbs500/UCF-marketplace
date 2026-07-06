@@ -43,7 +43,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-or-publishable-key>
 NEXT_PUBLIC_AUTH_MODE=supabase
 NEXT_PUBLIC_PRODUCT_MODE=real
-NEXT_PUBLIC_APP_URL=https://YOUR-VERCEL-DOMAIN.vercel.app
+NEXT_PUBLIC_APP_URL=https://ucf-marketplace.vercel.app
 NEXT_PUBLIC_ADMIN_EMAILS=your-email@ucf.edu
 ```
 
@@ -67,7 +67,7 @@ In Supabase Dashboard → **Authentication** → **URL Configuration**:
 **Site URL:**
 
 ```
-https://YOUR-VERCEL-DOMAIN.vercel.app
+https://ucf-marketplace.vercel.app
 ```
 
 **Redirect URLs** (add all that apply):
@@ -75,8 +75,10 @@ https://YOUR-VERCEL-DOMAIN.vercel.app
 ```
 http://127.0.0.1:3000/auth/callback
 http://localhost:3000/auth/callback
-https://YOUR-VERCEL-DOMAIN.vercel.app/auth/callback
+https://ucf-marketplace.vercel.app/auth/callback
 ```
+
+Magic links must return to `/auth/callback`. Knight Market sets `emailRedirectTo` to that path when sending OTP emails — not the site root alone.
 
 **Preview deployments:** If you test Vercel preview links (`*.vercel.app`), add each preview callback URL, e.g.:
 
@@ -84,7 +86,23 @@ https://YOUR-VERCEL-DOMAIN.vercel.app/auth/callback
 https://knight-market-git-main-yourteam.vercel.app/auth/callback
 ```
 
-The host in the magic link must match a configured redirect URL. Users must request the sign-in link **from the same origin** they will land on (deployed URL, not localhost).
+The host in the magic link must match a configured redirect URL. Users should request the sign-in link **from the same origin** they will land on (deployed URL, not localhost).
+
+### Custom SMTP for beta auth emails
+
+Supabase’s built-in sender is limited to about **2 emails/hour**. For private beta, configure custom SMTP:
+
+1. Create a [Resend](https://resend.com) account and verify your domain.
+2. In Supabase → **Authentication** → **Emails** → **SMTP Settings**, enable custom SMTP:
+   - Host: `smtp.resend.com`
+   - Port: `465`
+   - Username: `resend`
+   - Password: your `RESEND_API_KEY`
+   - Sender: `no-reply@YOURDOMAIN.com`
+   - Sender name: `Knight Market`
+3. Do not commit API keys to the repo.
+
+See [supabase-auth-setup.md](./supabase-auth-setup.md) for full SMTP steps.
 
 ---
 
@@ -158,8 +176,10 @@ See also:
 
 | Symptom | Likely cause | Fix |
 |---------|----------------|-----|
-| Magic link redirects to `localhost` | Signed in from localhost, or Supabase Site URL is localhost | Request link from deployed URL; set Site URL to Vercel domain |
-| Magic link / callback error | Redirect URL not allowlisted | Add `https://YOUR-DOMAIN/auth/callback` in Supabase |
+| Magic link redirects to `localhost` | Signed in from localhost, or Supabase Site URL is localhost | Request link from deployed URL; set Site URL to `https://ucf-marketplace.vercel.app` |
+| Magic link / callback error | Redirect URL not allowlisted, or link missing `code`/tokens | Add `https://ucf-marketplace.vercel.app/auth/callback` in Supabase; request a fresh link on the same device |
+| “Incomplete or expired” sign-in link | Mobile opened link without auth payload, or hash stripped | Request new link from production `/sign-in`; open on same device/browser |
+| Emails not arriving | Supabase built-in rate limit (~2/hour) | Configure custom SMTP via Resend (see section 4) |
 | Auth works locally but not on Vercel | Missing or wrong env vars | Verify all five `NEXT_PUBLIC_*` vars; redeploy |
 | RLS / permission errors | Schema or policies missing | Re-run `001` SQL; check user is authenticated |
 | Image upload fails | Bucket missing or RLS | Confirm `listing-images` bucket; upload path `{uid}/filename` |

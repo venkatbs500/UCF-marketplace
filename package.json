@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
-    "smoke": "node scripts/smoke-routes.mjs",
+    "smoke": "node scripts/smoke-routes.mjs && node scripts/check-auth-url.mjs",
     "check:server": "node scripts/check-server.mjs",
     "check": "npm run lint && npm run type-check && npm run build",
     "e2e": "playwright test",

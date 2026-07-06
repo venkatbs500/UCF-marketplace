@@ -80,10 +80,11 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 NEXT_PUBLIC_AUTH_MODE=supabase
 NEXT_PUBLIC_PRODUCT_MODE=real
+# Local: http://127.0.0.1:3000 — Production: https://ucf-marketplace.vercel.app
 NEXT_PUBLIC_APP_URL=http://127.0.0.1:3000
 ```
 
-Copy from [`.env.local.example`](.env.local.example). Full setup guide: [docs/supabase-auth-setup.md](docs/supabase-auth-setup.md)
+Magic links must return to `/auth/callback`. Configure Supabase redirect URLs and custom SMTP (Resend recommended) for reliable delivery — see [docs/supabase-auth-setup.md](docs/supabase-auth-setup.md).
 
 ---
 

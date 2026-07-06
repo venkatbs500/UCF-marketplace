@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { AuthPageShell } from "@/components/auth/auth-page-shell";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -13,19 +13,24 @@ import {
   AUTH_ROUTES,
   buildOnboardingUrl,
   consumeAuthRedirect,
+  getSafeRedirectPath,
   peekAuthRedirect,
+  rememberAuthRedirect,
 } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
-export default function PostLoginPage() {
+function PostLoginContent() {
   const router = useRouter();
-  const {
-    authMode,
-    refreshSession,
-    isAuthenticated,
-    hasCompletedOnboarding,
-  } = useAuth();
+  const searchParams = useSearchParams();
+  const { authMode, refreshSession, isAuthenticated, hasCompletedOnboarding } = useAuth();
   const [synced, setSynced] = useState(false);
+
+  useEffect(() => {
+    const redirectFromUrl = getSafeRedirectPath(searchParams.get("redirect"));
+    if (redirectFromUrl) {
+      rememberAuthRedirect(redirectFromUrl);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (authMode !== "supabase") {
@@ -91,5 +96,19 @@ export default function PostLoginPage() {
     <AuthPageShell>
       <LoadingSpinner className="min-h-[45vh]" label="Finishing sign-in..." />
     </AuthPageShell>
+  );
+}
+
+export default function PostLoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <AuthPageShell>
+          <LoadingSpinner className="min-h-[45vh]" label="Finishing sign-in..." />
+        </AuthPageShell>
+      }
+    >
+      <PostLoginContent />
+    </Suspense>
   );
 }

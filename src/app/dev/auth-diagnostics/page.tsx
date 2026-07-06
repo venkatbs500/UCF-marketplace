@@ -9,7 +9,7 @@ import { TRUST_DISCLAIMER } from "@/lib/constants";
 import { useAuth } from "@/components/providers/auth-provider";
 import { getEmailDomain } from "@/lib/auth-domain";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-import { getAuthCallbackUrl, isDevelopmentEnvironment } from "@/lib/app-url";
+import { getAuthCallbackUrl, getAppUrl, isDevelopmentEnvironment } from "@/lib/app-url";
 import {
   AUTH_MODE,
   SUPABASE_ANON_KEY,
@@ -45,6 +45,7 @@ export default function AuthDiagnosticsPage() {
   const [supabaseSessionExists, setSupabaseSessionExists] = useState(false);
   const [sessionEmailDomain, setSessionEmailDomain] = useState<string | null>(null);
 
+  const appUrl = useMemo(() => getAppUrl(), []);
   const callbackUrl = useMemo(() => getAuthCallbackUrl(), []);
 
   const configIssues = getSupabaseConfigIssues();
@@ -135,6 +136,10 @@ export default function AuthDiagnosticsPage() {
             <div className="flex justify-between gap-4 rounded-xl bg-white/5 px-4 py-3">
               <dt className="text-muted">Key type</dt>
               <dd className="font-medium">{formatKeyType(getSupabaseKeyType())}</dd>
+            </div>
+            <div className="flex justify-between gap-4 rounded-xl bg-white/5 px-4 py-3">
+              <dt className="text-muted">NEXT_PUBLIC_APP_URL</dt>
+              <dd className="break-all text-right font-medium">{appUrl}</dd>
             </div>
             <div className="flex justify-between gap-4 rounded-xl bg-white/5 px-4 py-3">
               <dt className="text-muted">Expected callback URL</dt>

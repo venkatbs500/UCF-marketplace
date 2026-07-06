@@ -8,6 +8,7 @@ import {
   getServerSessionSnapshot,
 } from "@/lib/auth";
 import { getStudentEmailError, normalizeEmail } from "@/lib/auth-domain";
+import { peekAuthRedirect } from "@/lib/auth";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   fetchSupabaseProfile,
@@ -25,6 +26,22 @@ function mapSupabaseAuthError(error: unknown): string {
   if (error instanceof Error) {
     const message = error.message.trim();
     const lower = message.toLowerCase();
+
+    if (
+      lower.includes("rate limit") ||
+      lower.includes("too many requests") ||
+      lower.includes("email rate limit")
+    ) {
+      return "Too many sign-in emails were requested. Please wait a bit and try again.";
+    }
+
+    if (
+      lower.includes("expired") ||
+      lower.includes("invalid or has expired") ||
+      lower.includes("otp_expired")
+    ) {
+      return "That sign-in link expired. Please request a fresh link.";
+    }
 
     if (
       lower === "load failed" ||
@@ -197,7 +214,8 @@ export const supabaseAuthService: AuthService = {
       return { success: false, error: SUPABASE_SETUP_ERROR };
     }
 
-    const redirectTo = getAuthCallbackUrl();
+    const redirectPath = peekAuthRedirect();
+    const redirectTo = getAuthCallbackUrl(redirectPath);
 
     try {
       const { error } = await client.auth.signInWithOtp({
