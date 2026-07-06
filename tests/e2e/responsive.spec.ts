@@ -17,7 +17,19 @@ test("home renders without horizontal overflow on mobile", async ({ page }) => {
 test("mobile navigation is visible", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Shop" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Shop tab" })).toBeVisible();
+  await expect(page.getByTestId("mobile-nav-more")).toBeVisible();
+});
+
+test("mobile explore menu opens lost-found and deals links", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("mobile-nav-more").click();
+  await expect(page.getByTestId("mobile-explore-menu")).toBeVisible();
+  await expect(page.getByTestId("mobile-explore-lost-found")).toBeVisible();
+  await expect(page.getByTestId("mobile-explore-discounts")).toBeVisible();
+
+  await page.getByTestId("mobile-explore-discounts").click();
+  await expect(page).toHaveURL(/\/discounts$/);
 });
 
 test("marketplace works on mobile", async ({ page }) => {

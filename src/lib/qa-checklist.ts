@@ -879,7 +879,8 @@ export const QA_CHECKLIST: QACheckSection[] = [
         id: "e2e-home",
         label: "Home E2E",
         steps: ["Run npm run e2e — home.spec.ts"],
-        expected: "Home loads, CTA and disclaimer visible.",
+        expected:
+          "Home loads, live module cards link correctly, AI shows coming soon, top nav includes Lost & Found and Deals.",
         status: "automated",
       },
       {
@@ -1140,7 +1141,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Real mode home has no fake counts",
         steps: ["Set NEXT_PUBLIC_PRODUCT_MODE=real", "Visit /"],
         expected:
-          "Campus modules show honest statuses (e.g. Open for student posts, Coming soon). No 240+ listings or 40+ tutors.",
+          "Live modules show browse/live copy. Only AI Study Tools says Coming soon. No 240+ listings or 40+ tutors.",
         status: "manual",
       },
       {
@@ -1148,7 +1149,7 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Real mode home has no fake preview people/items",
         steps: ["In real mode, inspect hero preview cards"],
         expected:
-          "No Mia, Sam, fake desks, fake discounts, or fake usage stats. Honest Coming soon labels.",
+          "No Mia, Sam, fake desks, or fake usage stats. Live module labels; only AI shows Coming soon.",
         status: "manual",
       },
       {

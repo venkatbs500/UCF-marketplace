@@ -61,37 +61,37 @@ const realPreviewCards = [
   {
     icon: ShoppingBag,
     title: "Student Marketplace",
-    subtitle: "Ready for real student posts",
+    subtitle: "Live — open for student posts",
     color: "from-blue-500/20 to-blue-600/10",
   },
   {
     icon: Users,
     title: "Housing",
-    subtitle: "Coming soon",
+    subtitle: "Live — browse housing posts",
     color: "from-purple-500/20 to-purple-600/10",
   },
   {
     icon: GraduationCap,
     title: "Tutoring",
-    subtitle: "Coming soon",
+    subtitle: "Live — find student tutors",
     color: "from-green-500/20 to-green-600/10",
   },
   {
     icon: Briefcase,
     title: "Campus Jobs",
-    subtitle: "Coming soon",
+    subtitle: "Live — browse jobs and gigs",
     color: "from-orange-500/20 to-orange-600/10",
   },
   {
     icon: Calendar,
     title: "Events",
-    subtitle: "Coming soon",
+    subtitle: "Live — discover campus events",
     color: "from-pink-500/20 to-pink-600/10",
   },
   {
     icon: Sparkles,
     title: "AI Study Tools",
-    subtitle: "Planned — not connected yet",
+    subtitle: "Coming soon",
     color: "from-gold/20 to-gold/10",
   },
 ];

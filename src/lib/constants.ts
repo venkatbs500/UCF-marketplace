@@ -13,9 +13,30 @@ export const NAV_ITEMS = [
   { href: "/tutoring", label: "Tutoring", icon: "GraduationCap" },
   { href: "/jobs", label: "Jobs", icon: "Briefcase" },
   { href: "/events", label: "Events", icon: "Calendar" },
+  { href: "/lost-found", label: "Lost & Found", shortLabel: "Lost & Found", icon: "Search" },
+  { href: "/discounts", label: "Deals", shortLabel: "Deals", icon: "Tag" },
   { href: "/ai", label: "AI", icon: "Sparkles" },
+] as const;
+
+/** Primary desktop header links for shipped campus modules (excludes Home and AI). */
+export const PRIMARY_NAV = [
+  { href: "/marketplace", label: "Marketplace", shortLabel: "Shop", icon: "Store" },
+  { href: "/housing", label: "Housing", icon: "Building2" },
+  { href: "/tutoring", label: "Tutoring", icon: "GraduationCap" },
+  { href: "/jobs", label: "Jobs", icon: "Briefcase" },
+  { href: "/events", label: "Events", icon: "Calendar" },
+  { href: "/lost-found", label: "Lost & Found", shortLabel: "Lost", icon: "Search" },
+  { href: "/discounts", label: "Deals", icon: "Tag" },
+] as const;
+
+export const EXPLORE_NAV = [
+  { href: "/housing", label: "Housing", icon: "Building2" },
+  { href: "/tutoring", label: "Tutoring", icon: "GraduationCap" },
+  { href: "/jobs", label: "Jobs", icon: "Briefcase" },
+  { href: "/events", label: "Events", icon: "Calendar" },
   { href: "/lost-found", label: "Lost & Found", icon: "Search" },
-  { href: "/discounts", label: "Discounts", icon: "Tag" },
+  { href: "/discounts", label: "Deals", icon: "Tag" },
+  { href: "/ai", label: "AI Study Tools", icon: "Sparkles", comingSoon: true },
 ] as const;
 
 export const SECONDARY_NAV = [
