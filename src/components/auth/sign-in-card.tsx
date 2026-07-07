@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/components/providers/auth-provider";
 import { SignInHashHandler } from "@/components/auth/sign-in-hash-handler";
-import { rememberAuthRedirect } from "@/lib/auth";
+import { rememberAuthRedirect, buildVerifyUrl, peekAuthRedirect } from "@/lib/auth";
 import { getSignInErrorMessage } from "@/lib/auth-errors";
 import { APP_NAME, TRUST_DISCLAIMER } from "@/lib/constants";
 
@@ -43,7 +43,8 @@ export function SignInCard() {
     setLoading(false);
     if (result.success) {
       setSuccess("Check your UCF email for your secure sign-in link.");
-      router.push("/verify");
+      const redirect = searchParams.get("redirect") ?? peekAuthRedirect();
+      router.push(buildVerifyUrl(redirect));
     } else {
       setError(result.error ?? "Something went wrong. Please try again.");
     }

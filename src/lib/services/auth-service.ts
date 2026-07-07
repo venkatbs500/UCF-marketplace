@@ -14,7 +14,9 @@ export interface AuthService {
   getServerSessionReadySnapshot(): boolean;
   isUcfEmail(email: string): boolean;
   signInWithEmail(email: string): Promise<AuthResult>;
+  resendSignInLink(): Promise<AuthResult>;
   verifyCode(code: string, pendingEmail: string | null): Promise<AuthResult>;
+  clearPendingVerification(): void;
   completeOnboarding(user: AuthUser, data: OnboardingData): Promise<AuthResult>;
   refreshSession(): Promise<void>;
   signOut(): void;

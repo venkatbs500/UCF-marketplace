@@ -14,6 +14,7 @@ import {
   subscribeSession,
 } from "@/lib/auth";
 import { getStudentEmailError, isAllowedStudentEmail, normalizeEmail } from "@/lib/auth-domain";
+import { VERIFY_MESSAGES } from "@/lib/auth-errors";
 
 /** LocalStorage-backed auth — temporary until Supabase Auth replaces this module. */
 export const localAuthService: AuthService = {
@@ -33,6 +34,21 @@ export const localAuthService: AuthService = {
     if (emailError) return { success: false, error: emailError };
     saveSession({ user: null, pendingEmail: trimmed });
     return { success: true };
+  },
+
+  async resendSignInLink(): Promise<AuthResult> {
+    const session = loadSession();
+    if (!session.pendingEmail) {
+      return { success: false, error: VERIFY_MESSAGES.missingPendingEmail };
+    }
+    saveSession({ user: session.user, pendingEmail: session.pendingEmail });
+    return { success: true };
+  },
+
+  clearPendingVerification(): void {
+    const session = loadSession();
+    if (session.user?.isVerifiedStudent) return;
+    saveSession({ user: null, pendingEmail: null });
   },
 
   async verifyCode(code: string, pendingEmail: string | null): Promise<AuthResult> {

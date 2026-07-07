@@ -5,12 +5,14 @@ const STORAGE_KEYS = [
   "knight-market-saved-listings",
   "knight-market-user-listings",
   "knight-market-listing-draft",
+  "knight-market-supabase-pending-email",
 ];
 
 export async function clearKnightMarketStorage(page: Page) {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.evaluate((keys) => {
     keys.forEach((key) => localStorage.removeItem(key));
+    sessionStorage.removeItem("knight-market-auth-redirect");
   }, STORAGE_KEYS);
 }
 

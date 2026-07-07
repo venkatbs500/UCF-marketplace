@@ -9,6 +9,7 @@ import {
 } from "@/lib/auth";
 import { getStudentEmailError, normalizeEmail } from "@/lib/auth-domain";
 import { peekAuthRedirect } from "@/lib/auth";
+import { VERIFY_MESSAGES } from "@/lib/auth-errors";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   fetchSupabaseProfile,
@@ -232,6 +233,20 @@ export const supabaseAuthService: AuthService = {
     writePendingEmail(normalized);
     setSession({ user: sessionCache.user, pendingEmail: normalized });
     return { success: true };
+  },
+
+  async resendSignInLink(): Promise<AuthResult> {
+    const pendingEmail = readPendingEmail() ?? sessionCache.pendingEmail;
+    if (!pendingEmail) {
+      return { success: false, error: VERIFY_MESSAGES.missingPendingEmail };
+    }
+    return supabaseAuthService.signInWithEmail(pendingEmail);
+  },
+
+  clearPendingVerification(): void {
+    if (sessionCache.user?.isVerifiedStudent) return;
+    writePendingEmail(null);
+    setSession({ user: null, pendingEmail: null });
   },
   async verifyCode(): Promise<AuthResult> {
     if (!hasSupabaseEnv) return { success: false, error: SUPABASE_SETUP_ERROR };

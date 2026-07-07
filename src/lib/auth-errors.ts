@@ -32,6 +32,26 @@ export function getSignInErrorMessage(code: string | null | undefined): string |
   return SIGN_IN_ERROR_MESSAGES[code] ?? null;
 }
 
+export const VERIFY_MESSAGES = {
+  missingPendingEmail:
+    "We do not know which email to resend to. Please enter your UCF email again.",
+  resendSuccess: "New sign-in link sent. Use the newest email link.",
+  resendFailure: "We could not send a new link. Please wait and try again.",
+  rateLimit:
+    "Too many sign-in emails were requested. Please wait before requesting another link.",
+  expiredLink:
+    "That sign-in link expired or was incomplete. Please request a fresh link.",
+} as const;
+
+export function isAuthRateLimitMessage(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    lower.includes("rate limit") ||
+    lower.includes("too many requests") ||
+    lower.includes("too many sign-in emails")
+  );
+}
+
 export function mapSupabaseAuthErrorToSignInCode(message: string): AuthSignInErrorCode {
   const lower = message.toLowerCase();
 

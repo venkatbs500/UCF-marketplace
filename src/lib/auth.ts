@@ -47,6 +47,12 @@ export function buildSignInUrl(redirectPath?: string | null): string {
   return `${AUTH_ROUTES.signIn}?redirect=${encodeURIComponent(safe)}`;
 }
 
+export function buildVerifyUrl(redirectPath?: string | null): string {
+  const safe = getSafeRedirectPath(redirectPath ?? null);
+  if (!safe) return AUTH_ROUTES.verify;
+  return `${AUTH_ROUTES.verify}?redirect=${encodeURIComponent(safe)}`;
+}
+
 export function buildOnboardingUrl(redirectPath?: string | null): string {
   const safe = getSafeRedirectPath(redirectPath ?? null);
   if (!safe) return AUTH_ROUTES.onboarding;
@@ -79,12 +85,11 @@ export function getAuthDestination({
 
   if (mode === "sign-in") {
     if (isAuthenticated) return AUTH_ROUTES.onboarding;
-    if (pendingEmail) return AUTH_ROUTES.verify;
+    if (pendingEmail) return buildVerifyUrl(peekAuthRedirect());
     return null;
   }
 
   if (mode === "verify") {
-    if (!pendingEmail && !isAuthenticated) return AUTH_ROUTES.signIn;
     if (isAuthenticated) return AUTH_ROUTES.onboarding;
     return null;
   }

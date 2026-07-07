@@ -35,7 +35,7 @@ test("sign-in remembers redirect query for magic link flow", async ({ page }) =>
   await page.goto("/sign-in?redirect=%2Fsell");
   await page.getByLabel("UCF Email").fill("test@ucf.edu");
   await page.getByRole("button", { name: /Send secure sign-in link/i }).click();
-  await page.waitForURL("**/verify", { timeout: 15_000 });
+  await page.waitForURL(/\/verify(\?redirect=%2Fsell)?/, { timeout: 15_000 });
   const redirect = await page.evaluate(() =>
     sessionStorage.getItem("knight-market-auth-redirect")
   );

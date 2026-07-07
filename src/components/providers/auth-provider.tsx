@@ -21,6 +21,8 @@ type AuthContextValue = {
   isVerifiedStudent: boolean;
   hasCompletedOnboarding: boolean;
   signInWithEmail: (email: string) => Promise<{ success: boolean; error?: string }>;
+  resendSignInLink: () => Promise<{ success: boolean; error?: string }>;
+  clearPendingVerification: () => void;
   verifyCode: (code: string) => Promise<{ success: boolean; error?: string }>;
   completeOnboarding: (
     data: OnboardingData
@@ -70,6 +72,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  const resendSignInLink = useCallback(() => activeAuthService.resendSignInLink(), []);
+
+  const clearPendingVerification = useCallback(
+    () => activeAuthService.clearPendingVerification(),
+    []
+  );
+
   const verifyCode = useCallback(
     (code: string) => activeAuthService.verifyCode(code, pendingEmail),
     [pendingEmail]
@@ -109,6 +118,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isVerifiedStudent: Boolean(user?.isVerifiedStudent),
       hasCompletedOnboarding: Boolean(user?.hasCompletedOnboarding),
       signInWithEmail,
+      resendSignInLink,
+      clearPendingVerification,
       verifyCode,
       completeOnboarding,
       refreshSession,
@@ -119,6 +130,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       pendingEmail,
       isLoading,
       signInWithEmail,
+      resendSignInLink,
+      clearPendingVerification,
       verifyCode,
       completeOnboarding,
       refreshSession,
