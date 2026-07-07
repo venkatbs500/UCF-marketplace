@@ -1,4 +1,7 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import {
+  deleteStorageFilesSafely,
+} from "./supabase-storage-cleanup";
 
 const LISTING_IMAGES_BUCKET = "listing-images";
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
@@ -101,26 +104,7 @@ export async function deleteListingImagesForUser(
   imageUrls: string[],
   userId: string
 ): Promise<void> {
-  const client = getSupabaseBrowserClient();
-  if (!client || imageUrls.length === 0) return;
-
-  const paths = imageUrls
-    .map((url) => {
-      try {
-        const parsed = new URL(url);
-        const marker = `/storage/v1/object/public/${LISTING_IMAGES_BUCKET}/`;
-        const index = parsed.pathname.indexOf(marker);
-        if (index === -1) return null;
-        const path = decodeURIComponent(parsed.pathname.slice(index + marker.length));
-        if (!path.startsWith(`${userId}/`)) return null;
-        return path;
-      } catch {
-        return null;
-      }
-    })
-    .filter((path): path is string => Boolean(path));
-
-  if (paths.length === 0) return;
-
-  await client.storage.from(LISTING_IMAGES_BUCKET).remove(paths);
+  await deleteStorageFilesSafely(LISTING_IMAGES_BUCKET, imageUrls, {
+    userIdPrefix: userId,
+  });
 }

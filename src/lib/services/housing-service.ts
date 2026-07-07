@@ -109,7 +109,7 @@ export async function updateHousingPost(
 export async function deleteHousingPost(
   id: string,
   userId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; storageWarning?: string }> {
   if (!usesSupabaseHousing()) return { success: false, error: "Supabase housing is not enabled." };
   return deleteSupabaseHousingPost(id, userId);
 }

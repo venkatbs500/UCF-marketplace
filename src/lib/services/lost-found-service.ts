@@ -108,7 +108,7 @@ export async function markLostFoundItemResolved(
 export async function deleteLostFoundItem(
   id: string,
   userId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; storageWarning?: string }> {
   if (!usesSupabaseLostFound()) {
     return { success: false, error: "Supabase Lost & Found is not enabled." };
   }

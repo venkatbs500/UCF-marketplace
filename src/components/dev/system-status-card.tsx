@@ -126,7 +126,9 @@ const STATUS_ROWS: StatusRow[] = [
   {
     label: "Housing Image Upload",
     status: usesSupabaseHousing() ? "ready" : "not-connected",
-    detail: usesSupabaseHousing() ? "housing-images bucket" : "not available in demo",
+    detail: usesSupabaseHousing()
+      ? "housing-images bucket; delete/edit cleanup"
+      : "not available in demo",
   },
   {
     label: "Housing Reports",

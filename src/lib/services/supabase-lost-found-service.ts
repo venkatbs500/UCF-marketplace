@@ -1,6 +1,10 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { ProfileRow } from "./supabase-marketplace-types";
 import {
+  deleteStorageFilesSafely,
+  getRemovedImageUrls,
+} from "./supabase-storage-cleanup";
+import {
   filterLostFoundItems,
   mapLostFoundItemRow,
   type CreateLostFoundItemInput,
@@ -217,6 +221,22 @@ export async function updateLostFoundItem(
   const client = getSupabaseBrowserClient();
   if (!client) return { item: null, error: "Supabase is not configured." };
 
+  const { data: existingRow, error: fetchError } = await client
+    .from("lost_found_items")
+    .select("images")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (fetchError) return { item: null, error: mapSupabaseError(fetchError) };
+  if (!existingRow) {
+    return { item: null, error: "Item not found or you do not have permission." };
+  }
+
+  const previousImages = ((existingRow as { images?: string[] | null }).images ?? []).filter(
+    Boolean
+  );
+
   const patch: Record<string, unknown> = {};
   if (input.itemType != null) patch.type = input.itemType;
   if (input.title != null) patch.title = input.title.trim();
@@ -237,6 +257,15 @@ export async function updateLostFoundItem(
 
   if (error) return { item: null, error: mapSupabaseError(error) };
   if (!data) return { item: null, error: "Item not found or you do not have permission." };
+
+  if (input.images != null) {
+    const removedImages = getRemovedImageUrls(previousImages, input.images);
+    if (removedImages.length > 0) {
+      await deleteStorageFilesSafely(LOST_FOUND_IMAGES_BUCKET, removedImages, {
+        userIdPrefix: userId,
+      });
+    }
+  }
 
   const row = data as LostFoundItemRow;
   const profiles = await fetchProfilesByIds([row.user_id]);
@@ -265,12 +294,38 @@ export async function markLostFoundItemResolved(
 export async function deleteLostFoundItem(
   id: string,
   userId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; storageWarning?: string }> {
   const client = getSupabaseBrowserClient();
   if (!client) return { success: false, error: "Supabase is not configured." };
 
+  const { data: existingRow, error: fetchError } = await client
+    .from("lost_found_items")
+    .select("images, user_id")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (fetchError) return { success: false, error: mapSupabaseError(fetchError) };
+  if (!existingRow) {
+    return { success: false, error: "Item not found or you do not have permission." };
+  }
+
+  const images = ((existingRow as { images?: string[] | null }).images ?? []).filter(Boolean);
+
   const { error } = await client.from("lost_found_items").delete().eq("id", id).eq("user_id", userId);
   if (error) return { success: false, error: mapSupabaseError(error) };
+
+  const cleanup = await deleteStorageFilesSafely(LOST_FOUND_IMAGES_BUCKET, images, {
+    userIdPrefix: userId,
+  });
+
+  if (cleanup.failedPaths.length > 0) {
+    return {
+      success: true,
+      storageWarning: "Post deleted, but some photos could not be removed from storage.",
+    };
+  }
+
   return { success: true };
 }
 

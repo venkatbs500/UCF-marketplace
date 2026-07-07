@@ -112,7 +112,7 @@ export async function markCampusEventCancelled(
 export async function deleteCampusEvent(
   id: string,
   userId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; storageWarning?: string }> {
   if (!usesSupabaseEvents()) {
     return { success: false, error: "Supabase events are not enabled." };
   }

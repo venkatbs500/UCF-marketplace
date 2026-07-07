@@ -1,6 +1,10 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { ProfileRow } from "./supabase-marketplace-types";
 import {
+  deleteStorageFilesSafely,
+  getRemovedImageUrls,
+} from "./supabase-storage-cleanup";
+import {
   filterCampusEvents,
   mapCampusEventRow,
   type CampusEventFilters,
@@ -235,6 +239,22 @@ export async function updateCampusEvent(
   const client = getSupabaseBrowserClient();
   if (!client) return { event: null, error: "Supabase is not configured." };
 
+  const { data: existingRow, error: fetchError } = await client
+    .from("campus_events")
+    .select("images")
+    .eq("id", id)
+    .eq("posted_by", userId)
+    .maybeSingle();
+
+  if (fetchError) return { event: null, error: mapSupabaseError(fetchError) };
+  if (!existingRow) {
+    return { event: null, error: "Event not found or you do not have permission." };
+  }
+
+  const previousImages = ((existingRow as { images?: string[] | null }).images ?? []).filter(
+    Boolean
+  );
+
   const patch: Record<string, unknown> = {};
   if (input.title != null) patch.title = input.title.trim();
   if (input.description != null) patch.description = input.description.trim();
@@ -258,6 +278,15 @@ export async function updateCampusEvent(
 
   if (error) return { event: null, error: mapSupabaseError(error) };
   if (!data) return { event: null, error: "Event not found or you do not have permission." };
+
+  if (input.images != null) {
+    const removedImages = getRemovedImageUrls(previousImages, input.images);
+    if (removedImages.length > 0) {
+      await deleteStorageFilesSafely(EVENT_IMAGES_BUCKET, removedImages, {
+        userIdPrefix: userId,
+      });
+    }
+  }
 
   const row = data as CampusEventRow;
   const profiles = await fetchProfilesByIds([row.posted_by]);
@@ -289,12 +318,38 @@ export async function markCampusEventCancelled(
 export async function deleteCampusEvent(
   id: string,
   userId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; storageWarning?: string }> {
   const client = getSupabaseBrowserClient();
   if (!client) return { success: false, error: "Supabase is not configured." };
 
+  const { data: existingRow, error: fetchError } = await client
+    .from("campus_events")
+    .select("images, posted_by")
+    .eq("id", id)
+    .eq("posted_by", userId)
+    .maybeSingle();
+
+  if (fetchError) return { success: false, error: mapSupabaseError(fetchError) };
+  if (!existingRow) {
+    return { success: false, error: "Event not found or you do not have permission." };
+  }
+
+  const images = ((existingRow as { images?: string[] | null }).images ?? []).filter(Boolean);
+
   const { error } = await client.from("campus_events").delete().eq("id", id).eq("posted_by", userId);
   if (error) return { success: false, error: mapSupabaseError(error) };
+
+  const cleanup = await deleteStorageFilesSafely(EVENT_IMAGES_BUCKET, images, {
+    userIdPrefix: userId,
+  });
+
+  if (cleanup.failedPaths.length > 0) {
+    return {
+      success: true,
+      storageWarning: "Post deleted, but some photos could not be removed from storage.",
+    };
+  }
+
   return { success: true };
 }
 

@@ -1,6 +1,10 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { ProfileRow } from "./supabase-marketplace-types";
 import {
+  deleteStorageFilesSafely,
+  getRemovedImageUrls,
+} from "./supabase-storage-cleanup";
+import {
   mapHousingPostRow,
   type CreateHousingPostInput,
   type HousingPostFilters,
@@ -221,6 +225,20 @@ export async function updateHousingPost(
   const client = getSupabaseBrowserClient();
   if (!client) return { post: null, error: "Supabase is not configured." };
 
+  const { data: existingRow, error: fetchError } = await client
+    .from("housing_posts")
+    .select("images")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (fetchError) return { post: null, error: mapSupabaseError(fetchError) };
+  if (!existingRow) return { post: null, error: "Housing post not found." };
+
+  const previousImages = ((existingRow as { images?: string[] | null }).images ?? []).filter(
+    Boolean
+  );
+
   const patch: Record<string, unknown> = {};
   if (input.type) patch.type = input.type;
   if (input.title !== undefined) patch.title = input.title.trim();
@@ -247,6 +265,15 @@ export async function updateHousingPost(
   if (error) return { post: null, error: mapSupabaseError(error) };
   if (!data) return { post: null, error: "Housing post not found." };
 
+  if (input.images !== undefined) {
+    const removedImages = getRemovedImageUrls(previousImages, input.images);
+    if (removedImages.length > 0) {
+      await deleteStorageFilesSafely(HOUSING_IMAGES_BUCKET, removedImages, {
+        userIdPrefix: userId,
+      });
+    }
+  }
+
   const profiles = await fetchProfilesByIds([userId]);
   return {
     post: mapHousingPostRow(
@@ -259,12 +286,38 @@ export async function updateHousingPost(
 export async function deleteHousingPost(
   id: string,
   userId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; storageWarning?: string }> {
   const client = getSupabaseBrowserClient();
   if (!client) return { success: false, error: "Supabase is not configured." };
 
+  const { data: existingRow, error: fetchError } = await client
+    .from("housing_posts")
+    .select("images, user_id")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (fetchError) return { success: false, error: mapSupabaseError(fetchError) };
+  if (!existingRow) {
+    return { success: false, error: "Housing post not found." };
+  }
+
+  const images = ((existingRow as { images?: string[] | null }).images ?? []).filter(Boolean);
+
   const { error } = await client.from("housing_posts").delete().eq("id", id).eq("user_id", userId);
   if (error) return { success: false, error: mapSupabaseError(error) };
+
+  const cleanup = await deleteStorageFilesSafely(HOUSING_IMAGES_BUCKET, images, {
+    userIdPrefix: userId,
+  });
+
+  if (cleanup.failedPaths.length > 0) {
+    return {
+      success: true,
+      storageWarning: "Post deleted, but some photos could not be removed from storage.",
+    };
+  }
+
   return { success: true };
 }
 

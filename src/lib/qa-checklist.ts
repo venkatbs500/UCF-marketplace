@@ -1032,6 +1032,25 @@ export const QA_CHECKLIST: QACheckSection[] = [
         expected: "Only one listing created.",
         status: "manual",
       },
+      {
+        id: "supabase-storage-cleanup",
+        label: "Supabase Storage cleanup on delete/edit",
+        steps: [
+          "Delete a housing/lost-found/event post with images in Supabase real mode",
+          "Edit a post and remove an image from images[] (when UI supports removal)",
+        ],
+        expected:
+          "DB row deleted or images[] updated; files removed from housing-images, lost-found-images, or event-images. Status-only changes (inactive/resolved/cancelled/removed) keep files. See docs/supabase-storage-cleanup.md.",
+        status: "manual",
+      },
+      {
+        id: "supabase-storage-list-policy",
+        label: "Storage bucket list policy awareness",
+        steps: ["Open Supabase Storage → bucket policies for listing-images"],
+        expected:
+          "Public read works for image display. Broad list policies may expose file names; restrict list later without breaking public GET. See docs/supabase-storage-cleanup.md.",
+        status: "manual",
+      },
     ],
   },
   {
