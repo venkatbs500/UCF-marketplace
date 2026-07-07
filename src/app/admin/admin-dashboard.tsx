@@ -8,11 +8,28 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
 import { getActiveReportService } from "@/lib/services/report-service";
-import type { ReportItem, ReportStatus } from "@/lib/services/report-types";
+import type { ReportItem, ReportStatus, ReportTargetType } from "@/lib/services/report-types";
 import { isModerationRealtimeMode, REPORT_STATUS_OPTIONS } from "@/lib/services/report-service";
 import { formatRelativeTime } from "@/lib/utils";
 import { Shield, Lock } from "lucide-react";
 import type { getAdminDebugInfo } from "@/lib/admin";
+
+const REPORT_TARGET_LABELS: Record<ReportTargetType, string> = {
+  listing: "marketplace listing",
+  housing_post: "housing post",
+  tutor_profile: "tutor profile",
+  lost_found_item: "lost/found item",
+  campus_job: "job post",
+  campus_event: "event",
+  student_discount: "student discount",
+  message: "message",
+  user: "user",
+  conversation: "conversation",
+};
+
+function reportTargetLabel(targetType: ReportTargetType): string {
+  return REPORT_TARGET_LABELS[targetType] ?? targetType;
+}
 
 export function AdminDashboard() {
   const [reports, setReports] = useState<ReportItem[]>([]);
@@ -173,6 +190,14 @@ export function AdminDashboard() {
         subtitle="Review reports and apply basic moderation actions"
       />
 
+      <div className="mb-6 flex items-start gap-3 rounded-2xl border border-gold/20 bg-gold/5 p-4">
+        <Shield className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
+        <p className="text-sm text-muted">
+          Respect user privacy. Only inspect message content when reviewing a report, and only
+          remove content that violates safety or beta rules.
+        </p>
+      </div>
+
       <div className="mb-6 flex flex-wrap gap-2">
         <Button
           variant={statusFilter === "all" ? "default" : "secondary"}
@@ -221,7 +246,7 @@ export function AdminDashboard() {
               <CardContent className="space-y-3 py-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">{report.targetType}</Badge>
+                    <Badge variant="outline">{reportTargetLabel(report.targetType)}</Badge>
                     <Badge variant="secondary">{report.reason}</Badge>
                     <Badge variant="warning">{report.status}</Badge>
                   </div>
@@ -231,6 +256,12 @@ export function AdminDashboard() {
                 <p className="text-sm text-muted">
                   Target: <span className="font-mono">{report.targetId}</span>
                 </p>
+                {(report.targetType === "message" || report.targetType === "conversation") && (
+                  <p className="text-xs text-muted">
+                    Message content is hidden here. Use the report context carefully and only
+                    inspect content when necessary for this report.
+                  </p>
+                )}
                 {report.details && <p className="text-sm">{report.details}</p>}
                 <p className="text-xs text-muted">
                   Reporter: {report.reporterName ?? "Verified student"}{" "}

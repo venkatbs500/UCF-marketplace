@@ -1387,6 +1387,42 @@ export const QA_CHECKLIST: QACheckSection[] = [
         status: "manual",
       },
       {
+        id: "msg-delete-own",
+        label: "Delete own message (soft)",
+        steps: [
+          "In /messages thread, open your own message",
+          "Click Delete and confirm",
+        ],
+        expected:
+          "Bubble shows “Message deleted”. Row kept with deleted_at/deleted_by set (not hard-deleted). Other participant sees “Message deleted” live. Requires 012 SQL.",
+        status: "manual",
+      },
+      {
+        id: "msg-delete-others-blocked",
+        label: "Cannot delete other's message",
+        steps: ["Open a message sent by the other participant"],
+        expected: "No Delete action on messages you did not send. Report remains available.",
+        status: "manual",
+      },
+      {
+        id: "msg-delete-conversation",
+        label: "Delete/hide conversation for me",
+        steps: [
+          "Open a conversation and click Delete conversation, confirm",
+        ],
+        expected:
+          "Conversation leaves your inbox only. Other participant still sees it. Reappears for you if they send a newer message. No rows hard-deleted. Requires 012 SQL.",
+        status: "manual",
+      },
+      {
+        id: "msg-privacy-copy",
+        label: "Messaging privacy copy",
+        steps: ["Open /messages"],
+        expected:
+          "Banner: chats are between verified students; content reviewed only for safety reports.",
+        status: "manual",
+      },
+      {
         id: "msg-owner-block",
         label: "Owner cannot message self",
         steps: ["View your own listing"],
@@ -1462,6 +1498,14 @@ export const QA_CHECKLIST: QACheckSection[] = [
         label: "Hide moderated listing",
         steps: ["From admin report card (listing target), click Hide listing"],
         expected: "Listing status becomes removed and listing is hidden from public marketplace.",
+        status: "manual",
+      },
+      {
+        id: "mod-privacy-labels",
+        label: "Readable target labels + privacy note",
+        steps: ["Open /admin with reports present"],
+        expected:
+          "Report cards show readable target labels (e.g. 'marketplace listing', 'message'). Privacy reminder shown. Message-target cards do not display raw message bodies.",
         status: "manual",
       },
       {

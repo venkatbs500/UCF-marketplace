@@ -114,6 +114,25 @@ const STATUS_ROWS: StatusRow[] = [
       : "demo preview badges",
   },
   {
+    label: "Message Delete (own, soft)",
+    status: "ready",
+    detail: usesSupabaseMessaging()
+      ? "sender soft-delete; shows 'Message deleted'"
+      : "demo interactive preview",
+  },
+  {
+    label: "Conversation Delete/Hide (per user)",
+    status: "ready",
+    detail: usesSupabaseMessaging()
+      ? "hide for current user only"
+      : "demo interactive preview",
+  },
+  {
+    label: "Messaging Privacy Copy",
+    status: "ready",
+    detail: "safety-only content review note",
+  },
+  {
     label: "Moderation Reports",
     status: isModerationRealtimeMode() ? "ready" : "not-connected",
     detail: isModerationRealtimeMode() ? "Supabase reports/admin" : "demo preview",

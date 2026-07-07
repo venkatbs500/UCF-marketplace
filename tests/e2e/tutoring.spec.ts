@@ -32,10 +32,15 @@ test("demo tutor card opens detail page with message tutor", async ({ page }) =>
   await page.goto("/tutoring");
   const detailLink = page.getByTestId("tutor-detail-link-tutor-1");
   await expect(detailLink).toBeVisible({ timeout: 15_000 });
-  await detailLink.click();
-  await page.waitForURL(/\/tutoring\/tutor-1$/, { timeout: 15_000 });
-  await expect(page.getByTestId("tutor-detail")).toBeVisible();
-  await expect(page.getByTestId("message-tutor-tutor-1")).toBeVisible();
+  // Tie the click to the navigation so a slow client-side transition cannot be missed.
+  await Promise.all([
+    page.waitForURL(/\/tutoring\/tutor-1$/, { timeout: 15_000 }),
+    detailLink.click(),
+  ]);
+  // The detail view fetches asynchronously (shows a spinner first), so allow generous
+  // time for hydration + fetch before the content assertions instead of the 5s default.
+  await expect(page.getByTestId("tutor-detail")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("message-tutor-tutor-1")).toBeVisible({ timeout: 15_000 });
 });
 
 test("signed-in user message tutor routes to messages conversation", async ({ page }) => {

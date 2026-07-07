@@ -1,6 +1,7 @@
 import { usesSupabaseMessaging } from "@/lib/messaging-mode";
 import type { ConversationPreview } from "./supabase-messaging-types";
 import {
+  deleteOwnMessage,
   getConversation,
   getConversationUnreadCount,
   getMyConversations,
@@ -14,6 +15,7 @@ import {
   getUnreadConversationCount,
   getUnreadConversationIds,
   getUnreadSummary,
+  hideConversationForUser,
   markConversationRead,
   sendMessage,
   subscribeToConversations,
@@ -27,7 +29,10 @@ export type {
   MessageThreadItem,
   UnreadSummary,
 } from "./supabase-messaging-types";
-export { getConversationContext } from "./supabase-messaging-types";
+export {
+  getConversationContext,
+  isMessageDeleted,
+} from "./supabase-messaging-types";
 
 export {
   usesSupabaseMessaging,
@@ -53,6 +58,8 @@ export const supabaseMessagingService = {
   getOrCreateStudentDiscountConversation,
   getOrCreateTutorConversation,
   sendMessage,
+  deleteOwnMessage,
+  hideConversationForUser,
   getUnreadConversationCount,
   getConversationUnreadCount,
   markConversationRead,

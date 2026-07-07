@@ -3,14 +3,14 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MessageCircle, Shield } from "lucide-react";
+import { MessageCircle, Shield, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { DemoModeBadge } from "@/components/ui/demo-mode-badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -34,16 +34,47 @@ function demoContextLabel(contextType: MessagePreview["contextType"]): string {
   return "General";
 }
 
+type DemoThreadMessage = {
+  id: string;
+  body: string;
+  isOwnMessage: boolean;
+  timestamp: string;
+};
+
+function buildDemoThread(preview: MessagePreview): DemoThreadMessage[] {
+  return [
+    {
+      id: `${preview.id}-in`,
+      body: preview.lastMessage,
+      isOwnMessage: false,
+      timestamp: preview.timestamp,
+    },
+    {
+      id: `${preview.id}-out`,
+      body: "Sounds good — thanks for reaching out!",
+      isOwnMessage: true,
+      timestamp: preview.timestamp,
+    },
+  ];
+}
+
 function DemoMessagesContent() {
   const searchParams = useSearchParams();
   const conversationFromUrl = searchParams.get("conversation");
   const [pickedId, setPickedId] = useState<string | null>(null);
-  const activeId =
-    pickedId ??
-    messagePreviews.find((preview) => preview.id === conversationFromUrl)?.id ??
-    messagePreviews[0]?.id;
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
+  const [deletedMessageIds, setDeletedMessageIds] = useState<Set<string>>(() => new Set());
+  const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<string | null>(null);
+  const [pendingHideId, setPendingHideId] = useState<string | null>(null);
   const { markDemoConversationRead, isDemoConversationUnread } = useUnreadMessages();
-  const active = messagePreviews.find((m) => m.id === activeId);
+
+  const visiblePreviews = messagePreviews.filter((preview) => !hiddenIds.has(preview.id));
+
+  const activeId =
+    (pickedId && !hiddenIds.has(pickedId) ? pickedId : null) ??
+    visiblePreviews.find((preview) => preview.id === conversationFromUrl)?.id ??
+    visiblePreviews[0]?.id;
+  const active = visiblePreviews.find((m) => m.id === activeId);
 
   const handleSelect = (id: string) => {
     setPickedId(id);
@@ -58,6 +89,29 @@ function DemoMessagesContent() {
     }
   }, [activeId, markDemoConversationRead]);
 
+  const confirmDeleteMessage = () => {
+    if (!pendingDeleteMessageId) return;
+    setDeletedMessageIds((current) => {
+      const next = new Set(current);
+      next.add(pendingDeleteMessageId);
+      return next;
+    });
+    setPendingDeleteMessageId(null);
+  };
+
+  const confirmHideConversation = () => {
+    if (!pendingHideId) return;
+    setHiddenIds((current) => {
+      const next = new Set(current);
+      next.add(pendingHideId);
+      return next;
+    });
+    if (pickedId === pendingHideId) setPickedId(null);
+    setPendingHideId(null);
+  };
+
+  const threadMessages = active ? buildDemoThread(active) : [];
+
   return (
     <AppShell>
       <div className="mb-6 space-y-2">
@@ -71,13 +125,17 @@ function DemoMessagesContent() {
       <div className="mb-6 flex items-center gap-3 rounded-2xl border border-gold/20 bg-gold/5 p-4">
         <Shield className="h-5 w-5 shrink-0 text-gold" />
         <p className="text-sm text-muted">
-          Messages are limited to verified students to reduce spam.
+          Chats are between verified students. Report unsafe messages. Knight Market only
+          reviews message content when needed for safety reports.
         </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3 lg:gap-0 lg:overflow-hidden lg:rounded-2xl lg:glass-card lg:h-[calc(100vh-280px)]">
-        <div className="space-y-2 lg:col-span-1 lg:border-r lg:border-white/10 lg:p-4 lg:overflow-y-auto">
-          {messagePreviews.map((msg) => (
+        <div
+          className="space-y-2 lg:col-span-1 lg:border-r lg:border-white/10 lg:p-4 lg:overflow-y-auto"
+          data-testid="messages-conversation-list"
+        >
+          {visiblePreviews.map((msg) => (
             <button
               key={msg.id}
               type="button"
@@ -125,9 +183,14 @@ function DemoMessagesContent() {
               )}
             </button>
           ))}
+          {visiblePreviews.length === 0 && (
+            <p className="p-4 text-sm text-muted" data-testid="demo-empty-conversations">
+              No conversations in your inbox.
+            </p>
+          )}
         </div>
 
-        <div className="hidden lg:col-span-2 lg:flex lg:flex-col">
+        <div className="hidden lg:col-span-2 lg:flex lg:flex-col" data-testid="messages-thread-panel">
           {active ? (
             <>
               <div className="flex items-center gap-3 border-b border-white/10 p-4">
@@ -136,23 +199,74 @@ function DemoMessagesContent() {
                   size="md"
                   verified={active.participant.verified}
                 />
-                <div>
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold">{active.participant.name}</p>
                   <p className="text-xs text-muted">Re: {active.context}</p>
                 </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-auto gap-1.5"
+                  onClick={() => setPendingHideId(active.id)}
+                  data-testid="delete-conversation-button"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete conversation
+                </Button>
               </div>
-              <div className="flex flex-1 flex-col items-center justify-center p-8 text-center">
-                <MessageCircle className="mb-4 h-12 w-12 text-gold/30" />
-                <p className="mb-2 font-medium">Chat Preview</p>
-                <p className="max-w-sm text-sm text-muted">
-                  Demo inbox preview. Real messaging is enabled in Supabase real mode.
-                </p>
-                <Card className="mt-6 max-w-md text-left">
-                  <p className="mb-2 text-xs text-muted">
-                    {active.participant.name} · {formatRelativeTime(active.timestamp)}
-                  </p>
-                  <p className="text-sm">{active.lastMessage}</p>
-                </Card>
+              <div className="flex-1 space-y-3 overflow-y-auto p-4">
+                {threadMessages.map((message) => {
+                  const isDeleted = deletedMessageIds.has(message.id);
+                  return (
+                    <div
+                      key={message.id}
+                      className={cn("flex", message.isOwnMessage ? "justify-end" : "justify-start")}
+                    >
+                      <div
+                        className={cn(
+                          "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
+                          message.isOwnMessage ? "bg-gold/20 text-foreground" : "bg-white/5 text-foreground",
+                          isDeleted && "opacity-70"
+                        )}
+                        data-testid={`message-${message.id}`}
+                      >
+                        <p className={cn(isDeleted && "italic text-muted")}>
+                          {isDeleted ? "Message deleted" : message.body}
+                        </p>
+                        <p className="mt-1 text-[10px] text-muted">
+                          {formatRelativeTime(message.timestamp)}
+                        </p>
+                        {message.isOwnMessage && !isDeleted && (
+                          <div className="mt-1 flex justify-end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="gap-1.5"
+                              onClick={() => setPendingDeleteMessageId(message.id)}
+                              data-testid={`message-delete-${message.id}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </Button>
+                          </div>
+                        )}
+                        {!message.isOwnMessage && !isDeleted && (
+                          <div className="mt-1 flex justify-end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="gap-1.5"
+                              disabled
+                              data-testid={`message-report-${message.id}`}
+                            >
+                              Report
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               <div className="border-t border-white/10 p-4">
                 <div className="flex gap-2">
@@ -178,6 +292,30 @@ function DemoMessagesContent() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingDeleteMessageId)}
+        title="Delete this message?"
+        description="This deletes the message for everyone in the chat. The other person will see “Message deleted.” This cannot be undone."
+        confirmLabel="Delete message"
+        cancelLabel="Cancel"
+        confirmTestId="confirm-delete-message"
+        destructive
+        onConfirm={confirmDeleteMessage}
+        onCancel={() => setPendingDeleteMessageId(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingHideId)}
+        title="Delete this conversation?"
+        description="This removes the conversation from your inbox. It will not delete it for the other person, and it can reappear if they send a new message."
+        confirmLabel="Delete conversation"
+        cancelLabel="Cancel"
+        confirmTestId="confirm-hide-conversation"
+        destructive
+        onConfirm={confirmHideConversation}
+        onCancel={() => setPendingHideId(null)}
+      />
     </AppShell>
   );
 }

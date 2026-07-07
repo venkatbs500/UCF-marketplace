@@ -65,7 +65,9 @@ export function subscribeToMessages(
     .on(
       "postgres_changes",
       {
-        event: "INSERT",
+        // INSERT (new message) and UPDATE (soft delete / moderation hide) so the
+        // other participant sees "Message deleted" live without a manual refresh.
+        event: "*",
         schema: "public",
         table: "messages",
         filter: `conversation_id=eq.${conversationId}`,

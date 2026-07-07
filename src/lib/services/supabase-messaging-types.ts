@@ -25,6 +25,8 @@ export type ConversationRow = {
   last_message_at: string | null;
   buyer_last_read_at: string | null;
   seller_last_read_at: string | null;
+  buyer_deleted_at?: string | null;
+  seller_deleted_at?: string | null;
   created_at: string;
 };
 
@@ -36,6 +38,9 @@ export type MessageRow = {
   created_at: string;
   read_at: string | null;
   is_hidden?: boolean;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
+  deletion_reason?: string | null;
 };
 
 export type ConversationWithListingRow = ConversationRow & {
@@ -220,6 +225,9 @@ export type UnreadSummary = {
   unreadConversationIds: string[];
 };
 
+export const DELETED_MESSAGE_PLACEHOLDER = "Message deleted";
+export const HIDDEN_MESSAGE_PLACEHOLDER = "Message hidden by moderation";
+
 export type MessageThreadItem = {
   id: string;
   body: string;
@@ -228,7 +236,15 @@ export type MessageThreadItem = {
   createdAt: string;
   isOwnMessage: boolean;
   isHidden: boolean;
+  isDeleted: boolean;
+  canDelete: boolean;
 };
+
+export function isMessageDeleted(
+  message: Pick<MessageRow, "deleted_at">
+): boolean {
+  return Boolean(message.deleted_at);
+}
 
 function participantName(profile: ProfileRow | null | undefined): string {
   if (profile?.full_name?.trim()) return profile.full_name.trim();
@@ -310,13 +326,24 @@ export function mapMessageRowToThreadItem(
   currentUserId: string,
   senderName: string
 ): MessageThreadItem {
+  const isOwnMessage = row.sender_id === currentUserId;
+  const deleted = isMessageDeleted(row);
+  const hidden = Boolean(row.is_hidden);
+  const body = deleted
+    ? DELETED_MESSAGE_PLACEHOLDER
+    : hidden
+      ? HIDDEN_MESSAGE_PLACEHOLDER
+      : row.body;
+
   return {
     id: row.id,
-    body: row.is_hidden ? "Message hidden by moderation" : row.body,
+    body,
     senderId: row.sender_id,
     senderName,
     createdAt: row.created_at,
-    isOwnMessage: row.sender_id === currentUserId,
-    isHidden: Boolean(row.is_hidden),
+    isOwnMessage,
+    isHidden: hidden,
+    isDeleted: deleted,
+    canDelete: isOwnMessage && !deleted,
   };
 }

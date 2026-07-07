@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MessageCircle, RefreshCw, Shield } from "lucide-react";
+import { MessageCircle, RefreshCw, Shield, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Avatar } from "@/components/ui/avatar";
@@ -11,11 +11,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useAuth } from "@/components/providers/auth-provider";
 import { ReportDialog } from "@/components/safety/report-dialog";
 import {
+  deleteOwnMessage,
   getConversation,
   getMyConversations,
+  hideConversationForUser,
   markConversationRead,
   sendMessage,
   subscribeToConversations,
@@ -52,6 +55,9 @@ export function RealMessagesInbox() {
   const [sending, setSending] = useState(false);
   const [realtimeConnected, setRealtimeConnected] = useState(false);
   const [realtimeError, setRealtimeError] = useState(false);
+  const [pendingDeleteMessageId, setPendingDeleteMessageId] = useState<string | null>(null);
+  const [pendingHideConversation, setPendingHideConversation] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   const threadEndRef = useRef<HTMLDivElement>(null);
   const { refreshUnread } = useUnreadMessages();
 
@@ -200,6 +206,37 @@ export function RealMessagesInbox() {
     }
   };
 
+  const handleConfirmDeleteMessage = async () => {
+    if (!userId || !pendingDeleteMessageId) return;
+    const messageId = pendingDeleteMessageId;
+    setPendingDeleteMessageId(null);
+    setActionError(null);
+    const result = await deleteOwnMessage(messageId, userId);
+    if (!result.success) {
+      setActionError(result.error ?? "We could not delete this message.");
+      return;
+    }
+    if (selectedId) {
+      await reloadThread(selectedId);
+    }
+    await refreshUnread();
+  };
+
+  const handleConfirmHideConversation = async () => {
+    if (!userId || !selectedId) return;
+    const conversationId = selectedId;
+    setPendingHideConversation(false);
+    setActionError(null);
+    const result = await hideConversationForUser(conversationId, userId);
+    if (!result.success) {
+      setActionError(result.error ?? "We could not remove this conversation.");
+      return;
+    }
+    setThreadData(null);
+    router.replace("/messages", { scroll: false });
+    await reloadConversations();
+  };
+
   const emptyState = useMemo(
     () => (
       <EmptyState
@@ -239,7 +276,8 @@ export function RealMessagesInbox() {
         <div className="mb-6 flex items-center gap-3 rounded-2xl border border-gold/20 bg-gold/5 p-4">
           <Shield className="h-5 w-5 shrink-0 text-gold" />
           <p className="text-sm text-muted">
-            Messages are limited to verified students to reduce spam.
+            Chats are between verified students. Report unsafe messages. Knight Market only
+            reviews message content when needed for safety reports.
           </p>
         </div>
         {listError && (
@@ -268,9 +306,16 @@ export function RealMessagesInbox() {
       <div className="mb-6 flex items-center gap-3 rounded-2xl border border-gold/20 bg-gold/5 p-4">
         <Shield className="h-5 w-5 shrink-0 text-gold" />
         <p className="text-sm text-muted">
-          Messages are limited to verified students to reduce spam.
+          Chats are between verified students. Report unsafe messages. Knight Market only
+          reviews message content when needed for safety reports.
         </p>
       </div>
+
+      {actionError && (
+        <p role="alert" className="mb-4 text-sm text-red-400">
+          {actionError}
+        </p>
+      )}
 
       {listError && (
         <p role="alert" className="mb-4 text-sm text-red-400">
@@ -435,6 +480,16 @@ export function RealMessagesInbox() {
                     size="sm"
                     variant="ghost"
                   />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="gap-1.5"
+                    onClick={() => setPendingHideConversation(true)}
+                    data-testid="delete-conversation-button"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Delete conversation
+                  </Button>
                 </div>
               </div>
 
@@ -452,15 +507,32 @@ export function RealMessagesInbox() {
                         "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
                         message.isOwnMessage
                           ? "bg-gold/20 text-foreground"
-                          : "bg-white/5 text-foreground"
+                          : "bg-white/5 text-foreground",
+                        (message.isDeleted || message.isHidden) && "opacity-70"
                       )}
                       data-testid={`message-${message.id}`}
                     >
-                      <p>{message.isHidden ? "Message hidden by moderation" : message.body}</p>
+                      <p className={cn((message.isDeleted || message.isHidden) && "italic text-muted")}>
+                        {message.body}
+                      </p>
                       <p className="mt-1 text-[10px] text-muted">
                         {formatRelativeTime(message.createdAt)}
                       </p>
-                      {!message.isOwnMessage && (
+                      {message.canDelete && (
+                        <div className="mt-1 flex justify-end">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="gap-1.5"
+                            onClick={() => setPendingDeleteMessageId(message.id)}
+                            data-testid={`message-delete-${message.id}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </Button>
+                        </div>
+                      )}
+                      {!message.isOwnMessage && !message.isDeleted && !message.isHidden && (
                         <div className="mt-1 flex justify-end">
                           <ReportDialog
                             targetType="message"
@@ -514,6 +586,30 @@ export function RealMessagesInbox() {
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(pendingDeleteMessageId)}
+        title="Delete this message?"
+        description="This deletes the message for everyone in the chat. The other person will see “Message deleted.” This cannot be undone."
+        confirmLabel="Delete message"
+        cancelLabel="Cancel"
+        confirmTestId="confirm-delete-message"
+        destructive
+        onConfirm={() => void handleConfirmDeleteMessage()}
+        onCancel={() => setPendingDeleteMessageId(null)}
+      />
+
+      <ConfirmDialog
+        open={pendingHideConversation}
+        title="Delete this conversation?"
+        description="This removes the conversation from your inbox. It will not delete it for the other person, and it can reappear if they send a new message."
+        confirmLabel="Delete conversation"
+        cancelLabel="Cancel"
+        confirmTestId="confirm-hide-conversation"
+        destructive
+        onConfirm={() => void handleConfirmHideConversation()}
+        onCancel={() => setPendingHideConversation(false)}
+      />
     </AppShell>
   );
 }

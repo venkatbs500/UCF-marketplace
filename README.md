@@ -113,10 +113,16 @@ The production schema (tables, RLS, storage buckets) lives in SQL migrations:
 - Migration: [supabase/sql/001_core_product_schema.sql](supabase/sql/001_core_product_schema.sql)
 - Messaging policy: [supabase/sql/002_messaging_policy_fix.sql](supabase/sql/002_messaging_policy_fix.sql)
 - Moderation patch: [supabase/sql/003_moderation_reports.sql](supabase/sql/003_moderation_reports.sql)
+- Realtime/unread: [supabase/sql/004_realtime_unread_messaging.sql](supabase/sql/004_realtime_unread_messaging.sql)
+- Message deletion + privacy: [supabase/sql/012_message_deletion_privacy.sql](supabase/sql/012_message_deletion_privacy.sql)
 - Setup guide: [docs/supabase-core-schema-setup.md](docs/supabase-core-schema-setup.md)
 - Rollback: [supabase/sql/001_core_product_schema_rollback.sql](supabase/sql/001_core_product_schema_rollback.sql)
 
 Apply in the Supabase SQL Editor before private beta testing.
+
+### Messaging privacy
+
+Users can soft-delete their own messages (shows "Message deleted") and hide conversations from their own inbox. Message bodies are stored in plaintext for delivery and safety moderation — admins should only inspect content when reviewing a report. See [docs/messaging-privacy.md](docs/messaging-privacy.md).
 
 Moderation admin setup:
 

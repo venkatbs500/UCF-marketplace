@@ -37,10 +37,17 @@ test("demo lost-found card opens detail page with message poster", async ({ page
   await page.goto("/lost-found");
   const detailLink = page.getByTestId("lost-found-detail-link-lf-1");
   await expect(detailLink).toBeVisible({ timeout: 15_000 });
-  await detailLink.click();
-  await page.waitForURL(/\/lost-found\/lf-1$/, { timeout: 15_000 });
-  await expect(page.getByTestId("lost-found-detail")).toBeVisible();
-  await expect(page.getByTestId("message-lost-found-poster-lf-1")).toBeVisible();
+  // Tie the click to the navigation so a slow client-side transition cannot be missed.
+  await Promise.all([
+    page.waitForURL(/\/lost-found\/lf-1$/, { timeout: 15_000 }),
+    detailLink.click(),
+  ]);
+  // The detail view fetches asynchronously (shows a spinner first), so allow generous
+  // time for hydration + fetch before the content assertions instead of the 5s default.
+  await expect(page.getByTestId("lost-found-detail")).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByTestId("message-lost-found-poster-lf-1")
+  ).toBeVisible({ timeout: 15_000 });
 });
 
 test("signed-in user message poster routes to messages conversation", async ({ page }) => {

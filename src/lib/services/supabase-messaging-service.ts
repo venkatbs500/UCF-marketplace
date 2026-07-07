@@ -1,6 +1,7 @@
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { ProfileRow } from "./supabase-marketplace-types";
 import {
+  DELETED_MESSAGE_PLACEHOLDER,
   mapConversationRowToPreview,
   mapMessageRowToThreadItem,
   mapProfileToParticipant,
@@ -52,6 +53,41 @@ function latestMessageByConversation(
     }
   }
   return map;
+}
+
+/** Preview text for a conversation's latest message, hiding deleted/moderated bodies. */
+function previewTextForMessage(message: MessageRow | undefined): string | null {
+  if (!message) return null;
+  if (message.deleted_at) return DELETED_MESSAGE_PLACEHOLDER;
+  return message.body;
+}
+
+/**
+ * Returns the current user's "delete for me" timestamp for a conversation, based on
+ * whether they are the buyer (creator) or seller (other participant).
+ */
+function getDeletedAtForUser(
+  row: ConversationRow,
+  userId: string,
+  options?: Parameters<typeof resolveBuyerSellerIds>[1]
+): string | null {
+  const { buyerId, sellerId } = resolveBuyerSellerIds(row, options);
+  if (userId === buyerId) return row.buyer_deleted_at ?? null;
+  if (userId === sellerId) return row.seller_deleted_at ?? null;
+  return null;
+}
+
+/**
+ * A conversation is hidden for the user if they set a delete timestamp and no newer
+ * message has arrived since. A newer message makes it reappear.
+ */
+function isConversationHiddenForUser(
+  row: ConversationRow,
+  deletedAt: string | null
+): boolean {
+  if (!deletedAt) return false;
+  const lastActivity = row.last_message_at ?? row.created_at;
+  return lastActivity <= deletedAt;
 }
 
 type BuyerSellerIds = {
@@ -180,6 +216,7 @@ function countUnreadMessagesInThread(
   return messages.filter((message) => {
     if (message.sender_id === userId) return false;
     if (message.is_hidden) return false;
+    if (message.deleted_at) return false;
     if (!lastReadAt) return true;
     return message.created_at > lastReadAt;
   }).length;
@@ -354,6 +391,7 @@ async function countUnreadMessagesForConversation(
     .select("id", { count: "exact", head: true })
     .eq("conversation_id", conversationId)
     .neq("sender_id", userId)
+    .is("deleted_at", null)
     .or("is_hidden.is.null,is_hidden.eq.false");
 
   if (lastReadAt) {
@@ -566,7 +604,8 @@ export async function getMyConversations(userId: string): Promise<{
     messagesByConversation.set(message.conversation_id, existing);
   }
 
-  const conversations = rows.map((row) => {
+  const conversations = rows
+    .map((row) => {
     const otherId = row.participant_ids.find((id) => id !== userId) ?? "";
     const otherProfile = profiles.get(otherId);
     const latest = latestMessages.get(row.id);
@@ -598,13 +637,15 @@ export async function getMyConversations(userId: string): Promise<{
         : null,
     };
     const lastReadAt = getLastReadAtForUser(row, userId, readContext);
+    const deletedAt = getDeletedAtForUser(row, userId, readContext);
+    const hidden = isConversationHiddenForUser(row, deletedAt);
     const unreadCount = countUnreadMessagesInThread(
       messagesByConversation.get(row.id) ?? [],
       userId,
       lastReadAt
     );
 
-    return mapConversationRowToPreview(row, userId, {
+    const preview = mapConversationRowToPreview(row, userId, {
       otherParticipant: mapProfileToParticipant(otherProfile, otherId),
       listingTitle: row.listings?.title ?? null,
       housingTitle: row.housing_posts?.title ?? null,
@@ -613,10 +654,14 @@ export async function getMyConversations(userId: string): Promise<{
       campusJobTitle: campusJobDisplayTitle(row),
       campusEventTitle: campusEventDisplayTitle(row),
       studentDiscountTitle: studentDiscountDisplayTitle(row),
-      lastMessage: latest?.body ?? null,
+      lastMessage: previewTextForMessage(latest),
       unreadCount,
     });
-  });
+
+    return { preview, hidden };
+  })
+    .filter((entry) => !entry.hidden)
+    .map((entry) => entry.preview);
 
   return { conversations };
 }
@@ -675,7 +720,11 @@ export async function getConversation(
     return mapMessageRowToThreadItem(message, userId, senderName);
   });
 
-  const latest = messages[messages.length - 1];
+  const latestRow = ((messageData ?? []) as MessageRow[]).reduce<MessageRow | undefined>(
+    (latest, current) =>
+      !latest || current.created_at > latest.created_at ? current : latest,
+    undefined
+  );
   const unreadCount = countUnreadMessagesInThread(
     (messageData ?? []) as MessageRow[],
     userId,
@@ -690,7 +739,7 @@ export async function getConversation(
     campusJobTitle: campusJobDisplayTitle(row),
     campusEventTitle: campusEventDisplayTitle(row),
     studentDiscountTitle: studentDiscountDisplayTitle(row),
-    lastMessage: latest?.body ?? null,
+    lastMessage: previewTextForMessage(latestRow),
     unreadCount,
   });
 
@@ -1292,4 +1341,97 @@ export async function sendMessage(
   return {
     message: mapMessageRowToThreadItem(inserted as MessageRow, senderId, senderName),
   };
+}
+
+/**
+ * Soft-deletes a message the current user sent. The row is kept (never hard-deleted)
+ * so the other participant sees "Message deleted" and moderation can still review it.
+ * Only the sender can delete their own message (RLS enforces sender_id = auth.uid()).
+ */
+export async function deleteOwnMessage(
+  messageId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  const client = getSupabaseBrowserClient();
+  if (!client) {
+    return { success: false, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await client
+    .from("messages")
+    .update({
+      deleted_at: new Date().toISOString(),
+      deleted_by: userId,
+    })
+    .eq("id", messageId)
+    .eq("sender_id", userId)
+    .is("deleted_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    return { success: false, error: mapSupabaseError(error) };
+  }
+
+  if (!data) {
+    return { success: false, error: "You can only delete your own messages." };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Hides ("delete for me") a conversation from the current user's inbox by setting
+ * their per-participant deleted timestamp. Never affects the other participant, and
+ * never deletes the conversation row or its messages. A newer message reappears it.
+ */
+export async function hideConversationForUser(
+  conversationId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  const client = getSupabaseBrowserClient();
+  if (!client) {
+    return { success: false, error: "Supabase is not configured." };
+  }
+
+  const { data, error } = await client
+    .from("conversations")
+    .select(CONVERSATION_SELECT)
+    .eq("id", conversationId)
+    .maybeSingle();
+
+  if (error) {
+    return { success: false, error: mapSupabaseError(error) };
+  }
+
+  if (!data || !(data.participant_ids as string[]).includes(userId)) {
+    return { success: false, error: "Conversation not found." };
+  }
+
+  const row = data as ConversationWithListingRow;
+  const readContext = getParticipantReadContext(row);
+  const { buyerId, sellerId } = resolveBuyerSellerIds(row, readContext);
+  const now = new Date().toISOString();
+
+  const patch =
+    userId === buyerId
+      ? { buyer_deleted_at: now }
+      : userId === sellerId
+        ? { seller_deleted_at: now }
+        : null;
+
+  if (!patch) {
+    return { success: false, error: "Conversation not found." };
+  }
+
+  const { error: updateError } = await client
+    .from("conversations")
+    .update(patch)
+    .eq("id", conversationId);
+
+  if (updateError) {
+    return { success: false, error: mapSupabaseError(updateError) };
+  }
+
+  return { success: true };
 }

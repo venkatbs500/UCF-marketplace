@@ -37,10 +37,17 @@ test("demo discount card opens detail page with message poster", async ({ page }
   await page.goto("/discounts");
   const detailLink = page.getByTestId("discount-detail-link-disc-1");
   await expect(detailLink).toBeVisible({ timeout: 15_000 });
-  await detailLink.click();
-  await page.waitForURL(/\/discounts\/disc-1$/, { timeout: 15_000 });
-  await expect(page.getByTestId("discount-detail")).toBeVisible();
-  await expect(page.getByTestId("message-discount-poster-disc-1")).toBeVisible();
+  // Tie the click to the navigation so a slow client-side transition cannot be missed.
+  await Promise.all([
+    page.waitForURL(/\/discounts\/disc-1$/, { timeout: 15_000 }),
+    detailLink.click(),
+  ]);
+  // The detail view fetches asynchronously (shows a spinner first), so allow generous
+  // time for hydration + fetch before the content assertions instead of the 5s default.
+  await expect(page.getByTestId("discount-detail")).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByTestId("message-discount-poster-disc-1")
+  ).toBeVisible({ timeout: 15_000 });
 });
 
 test("signed-in user message poster routes to messages conversation", async ({ page }) => {
